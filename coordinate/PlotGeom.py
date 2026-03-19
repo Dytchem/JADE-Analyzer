@@ -175,8 +175,7 @@ class PlotGeom:
 
         if save_path is not None:
             fig.savefig(save_path)
-
-        return fig, ax, band_counts
+        plt.show()
 
 
 def load_and_plot(
@@ -191,7 +190,7 @@ def load_and_plot(
     coord = CoordMulti(paths, max_i_time)
     geom = Geometry(coord, *atoms)
     plotter = PlotGeom(geom)
-    return plotter.plot(
+    plotter.plot(
         y_min=y_min,
         y_max=y_max,
         show_band_stat=show_band_stat,
@@ -208,5 +207,4 @@ if __name__ == "__main__":
     geom.save_to_csv("./output/geom.csv")
 
     plotter = PlotGeom(geom)
-    fig, ax, band_counts = plotter.plot(y_min=-810, y_max=810)
-    plt.show()
+    plotter.plot(y_min=-810, y_max=810)

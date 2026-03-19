@@ -45,6 +45,20 @@ class CoordMulti:
         self.n = len([c for c in self.data.columns if c.endswith("_No.1")]) // 3
         self.time_interval = self.data["time"][1] - self.data["time"][0]
 
+    def set_time_series(self, time_series):
+        time_array = np.asarray(time_series, dtype=float)
+        if time_array.ndim != 1:
+            raise ValueError("time_series must be a 1D sequence")
+        if len(time_array) != len(self.data):
+            raise ValueError(
+                f"time_series length {len(time_array)} does not match data length {len(self.data)}"
+            )
+
+        self.data.loc[:, "time"] = time_array
+        self.time_interval = (
+            time_array[1] - time_array[0] if len(time_array) > 1 else np.nan
+        )
+
     def save_to_csv(self, path):
         self.data.to_csv(path, index=False)
 
