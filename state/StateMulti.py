@@ -92,10 +92,14 @@ class StateMulti:
         return {"hop_time": hop_time, "crash_time": crash_time}
 
     def description(self):
-        hop_time = self.distribution_change()["hop_time"]
+        dc = self.distribution_change()
+        hop_time = dc["hop_time"]
 
         # 最大时间内崩溃数量
-        count_crash = self.n - len(hop_time)
+        count_crash = len(dc["crash_time"])
+
+        # 退激发前崩溃数量
+        count_crash1 = self.n - len(hop_time)
         if len(hop_time) < self.n:
             hop_time += [self.data["time"].iloc[-1]] * count_crash
 
@@ -120,6 +124,7 @@ class StateMulti:
 
         return {
             "运行过程崩溃数量": count_crash,
+            "退激发前崩溃数量": count_crash1,
             "末尾未退激发数量": count_no_hop,
             "退激发时间中位数": hop_time_median,
             "退激发时间平均数": hop_time_mean,
