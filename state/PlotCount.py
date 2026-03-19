@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from pathlib import Path
-from state.StateMulti import StateMuti
+from StateMulti import StateMuti
 
 
 DEFAULT_FONT_PATH = (
@@ -19,7 +19,7 @@ class PlotCount:
         self.count_state = state_muti.count_state()
         self.font = font
 
-    def plot(self):
+    def plot(self, save_path=None):
         plt.figure()
         plt.plot(self.count_state["time"], self.count_state["count_state1"], label="S0")
         plt.plot(self.count_state["time"], self.count_state["count_state2"], label="S1")
@@ -30,9 +30,11 @@ class PlotCount:
         plt.ylabel("数量", fontproperties=self.font)
         plt.legend()
         plt.title("S0、S1和Crash数量随时间的变化", fontproperties=self.font)
+        if save_path is not None:
+            plt.savefig(save_path)
         plt.show()
 
-    def plot_normalized(self):
+    def plot_normalized(self, save_path=None):
         plt.figure()
         total = self.origin.n
         plt.plot(
@@ -54,6 +56,8 @@ class PlotCount:
         plt.ylabel("比例", fontproperties=self.font)
         plt.legend()
         plt.title("S0、S1和Crash占比随时间的变化", fontproperties=self.font)
+        if save_path is not None:
+            plt.savefig(save_path)
         plt.show()
 
 

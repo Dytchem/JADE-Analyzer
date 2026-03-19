@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from pathlib import Path
-from state.StateMulti import StateMuti
+from StateMulti import StateMuti
 
 
 DEFAULT_FONT_PATH = (
@@ -19,7 +19,7 @@ class PlotDistribution:
         self.distribution = state_muti.distribution_change()
         self.font = font
 
-    def plot_single(self, name, data, normalized=False, total=None):
+    def plot_single(self, name, data, normalized=False, total=None, save_path=None):
         plt.figure()
         if normalized:
             # Normalize by event count: each sample contributes 1 / total.
@@ -31,19 +31,33 @@ class PlotDistribution:
             plt.ylabel("数量", fontproperties=self.font)
         plt.xlabel("时间 (fs)", fontproperties=self.font)
         plt.title(f"{name}的直方图", fontproperties=self.font)
+        if save_path is not None:
+            plt.savefig(save_path)
         plt.show()
 
-    def plot(self):
-        self.plot_single("退激发", self.distribution["hop_time"])
-        self.plot_single("崩溃", self.distribution["crash_time"])
-
-    def plot_normalized(self):
-        total = self.origin.n
+    def plot(self, hop_save_path=None, crash_save_path=None):
         self.plot_single(
-            "退激发", self.distribution["hop_time"], normalized=True, total=total
+            "退激发", self.distribution["hop_time"], save_path=hop_save_path
         )
         self.plot_single(
-            "崩溃", self.distribution["crash_time"], normalized=True, total=total
+            "崩溃", self.distribution["crash_time"], save_path=crash_save_path
+        )
+
+    def plot_normalized(self, hop_save_path=None, crash_save_path=None):
+        total = self.origin.n
+        self.plot_single(
+            "退激发",
+            self.distribution["hop_time"],
+            normalized=True,
+            total=total,
+            save_path=hop_save_path,
+        )
+        self.plot_single(
+            "崩溃",
+            self.distribution["crash_time"],
+            normalized=True,
+            total=total,
+            save_path=crash_save_path,
         )
 
 

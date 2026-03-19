@@ -30,7 +30,7 @@ class PlotCount:
 
         plt.rcParams["axes.unicode_minus"] = False
 
-    def plot(self):
+    def plot(self, save_path=None):
         plt.figure()
 
         for col in self.count_columns:
@@ -43,9 +43,11 @@ class PlotCount:
         plt.legend(prop=self.font)
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
+        if save_path is not None:
+            plt.savefig(save_path)
         plt.show()
 
-    def plot_normalized(self):
+    def plot_normalized(self, save_path=None):
         plt.figure()
 
         total = self.origin.n
@@ -62,6 +64,8 @@ class PlotCount:
         plt.legend(prop=self.font)
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
+        if save_path is not None:
+            plt.savefig(save_path)
         plt.show()
 
 
@@ -72,6 +76,7 @@ if __name__ == "__main__":
     coord = CoordMulti(path, max_i_time)
     geom = Geometry(coord, "C3", "N2", "N1", "C7")
     count = CountGeom(geom)
+    count.save_to_csv("./output/count.csv")
 
     plot = PlotCount(count)
     plot.plot()

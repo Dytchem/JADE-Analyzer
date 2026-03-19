@@ -134,7 +134,7 @@ class PlotGeom:
         print(f"奇数条带: {odd_count}")
         print("=" * 50)
 
-    def plot(self, y_min=None, y_max=None, show_band_stat=True):
+    def plot(self, y_min=None, y_max=None, show_band_stat=True, save_path=None):
         fig, ax = plt.subplots(figsize=(8, 6))
         time = self.data["time"].to_numpy(dtype=float)
 
@@ -167,16 +167,30 @@ class PlotGeom:
         self._set_labels(ax)
         ax.grid(True, linestyle="--", alpha=0.6)
 
+        if save_path is not None:
+            fig.savefig(save_path)
+
         return fig, ax, band_counts
 
 
 def load_and_plot(
-    paths, max_i_time, *atoms, y_min=None, y_max=None, show_band_stat=True
+    paths,
+    max_i_time,
+    *atoms,
+    y_min=None,
+    y_max=None,
+    show_band_stat=True,
+    save_path=None,
 ):
     coord = CoordMulti(paths, max_i_time)
     geom = Geometry(coord, *atoms)
     plotter = PlotGeom(geom)
-    return plotter.plot(y_min=y_min, y_max=y_max, show_band_stat=show_band_stat)
+    return plotter.plot(
+        y_min=y_min,
+        y_max=y_max,
+        show_band_stat=show_band_stat,
+        save_path=save_path,
+    )
 
 
 if __name__ == "__main__":
@@ -185,6 +199,7 @@ if __name__ == "__main__":
 
     coord = CoordMulti(path, max_i_time)
     geom = Geometry(coord, "C3", "N2", "N1", "C7")
+    geom.save_to_csv("./output/geom.csv")
 
     plotter = PlotGeom(geom)
     fig, ax, band_counts = plotter.plot(y_min=-810, y_max=810)
