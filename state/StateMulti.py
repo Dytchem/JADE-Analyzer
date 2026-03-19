@@ -12,7 +12,7 @@ if str(CURRENT_DIR) not in sys.path:
 from StateSingle import StateSingle
 
 
-class StateMuti:
+class StateMulti:
     def __init__(self, path, max_i_time, type="folder"):
         self.max_i_time = max_i_time
         if type == "folder":
@@ -130,8 +130,8 @@ class StateMuti:
 if __name__ == "__main__":
     path = [f"E:\\GitHub\\JADE-Analyzer\\sample\\{i}" for i in range(1, 201)]
     max_i_time = 500
-    state = StateMuti(path, max_i_time)
-    state.save_to_csv(r"E:\GitHub\JADE-Analyzer\output\state_muti.csv")
+    state = StateMulti(path, max_i_time)
+    state.save_to_csv(r"E:\GitHub\JADE-Analyzer\output\state_multi.csv")
 
     # print(state.data)
     # print(state.count_state())

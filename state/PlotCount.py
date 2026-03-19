@@ -8,7 +8,7 @@ CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
-from StateMulti import StateMuti
+from StateMulti import StateMulti
 
 
 DEFAULT_FONT_PATH = (
@@ -19,11 +19,11 @@ DEFAULT_FONT_PATH = (
 class PlotCount:
     def __init__(
         self,
-        state_muti: StateMuti,
+        state_multi: StateMulti,
         font=fm.FontProperties(fname=str(DEFAULT_FONT_PATH)),
     ):
-        self.origin = state_muti
-        self.count_state = state_muti.count_state()
+        self.origin = state_multi
+        self.count_state = state_multi.count_state()
         self.font = font
 
     def plot(self, save_path=None):
@@ -71,7 +71,7 @@ class PlotCount:
 if __name__ == "__main__":
     path = [f"E:\\GitHub\\JADE-Analyzer\\sample\\{i}" for i in range(1, 201)]
     max_i_time = 500
-    state = StateMuti(path, max_i_time)
+    state = StateMulti(path, max_i_time)
     print(state.description())
 
     plot = PlotCount(state)
