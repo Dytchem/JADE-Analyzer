@@ -87,22 +87,34 @@ class Geometry:
 
     @staticmethod
     def _dihedral(p1, p2, p3, p4):
-        b0 = p2 - p1
-        b1 = p3 - p2
-        b2 = p4 - p3
+        ab = p2 - p1
+        bc = p3 - p2
+        cd = p4 - p3
 
-        b1_norm = np.linalg.norm(b1, axis=1, keepdims=True)
+        ab_norm = np.linalg.norm(ab, axis=1, keepdims=True)
+        bc_norm = np.linalg.norm(bc, axis=1, keepdims=True)
+        cd_norm = np.linalg.norm(cd, axis=1, keepdims=True)
+
         with np.errstate(invalid="ignore", divide="ignore"):
-            b1_unit = b1 / b1_norm
+            ab_unit = ab / ab_norm
+            bc_unit = bc / bc_norm
+            cd_unit = cd / cd_norm
 
-        v = b0 - np.sum(b0 * b1_unit, axis=1, keepdims=True) * b1_unit
-        w = b2 - np.sum(b2 * b1_unit, axis=1, keepdims=True) * b1_unit
+        m = np.cross(ab_unit, bc_unit)
+        n = np.cross(bc_unit, cd_unit)
 
-        x = np.einsum("ij,ij->i", v, w)
-        y = np.einsum("ij,ij->i", np.cross(b1_unit, v), w)
+        m_norm = np.linalg.norm(m, axis=1, keepdims=True)
+        n_norm = np.linalg.norm(n, axis=1, keepdims=True)
 
-        angle = np.degrees(np.arctan2(y, x))
-        return angle
+        with np.errstate(invalid="ignore", divide="ignore"):
+            m_unit = m / m_norm
+            n_unit = n / n_norm
+
+        x = np.einsum("ij,ij->i", m_unit, n_unit)
+        y = np.einsum("ij,ij->i", np.cross(m_unit, n_unit), bc_unit)
+
+        angle_rad = np.arctan2(y, x)
+        return np.degrees(angle_rad)
 
     @staticmethod
     def _unwrap_degrees(angle_deg):

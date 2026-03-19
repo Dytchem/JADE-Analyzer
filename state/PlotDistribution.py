@@ -20,6 +20,7 @@ class PlotDistribution:
         self.font = font
 
     def plot_single(self, name, data, normalized=False, total=None, save_path=None):
+        # print(data)
         plt.figure()
         if normalized:
             # Normalize by event count: each sample contributes 1 / total.

@@ -65,6 +65,7 @@ if __name__ == "__main__":
     path = [f"E:\\GitHub\\JADE-Analyzer\\sample\\{i}" for i in range(1, 201)]
     max_i_time = 500
     state = StateMuti(path, max_i_time)
+    print(state.description())
 
     plot = PlotCount(state)
     plot.plot_normalized()

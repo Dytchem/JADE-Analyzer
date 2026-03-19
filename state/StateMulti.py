@@ -78,19 +78,53 @@ class StateMuti:
                         if not flag:
                             crash_time.append(self.data.iloc[j + 1, 0])
                         flag = True
+        hop_time.sort()
+        crash_time.sort()
         return {"hop_time": hop_time, "crash_time": crash_time}
+
+    def description(self):
+        hop_time = self.distribution_change()["hop_time"]
+
+        # 最大时间内崩溃数量
+        count_crash = self.n - len(hop_time)
+        if len(hop_time) < self.n:
+            hop_time += [self.data["time"].iloc[-1]] * count_crash
+
+        # hop_time.sort()
+        # print(hop_time)
+
+        # 最大时间内未退激发的数量
+        count_no_hop = sum(
+            1 for i in range(self.n) if self.data.iloc[self.max_i_time, i + 1] == 2
+        )
+
+        # S0 和 S1 的数量相等的时间（退激发时间中位数）
+        hop_time_median = np.median(hop_time)
+
+        # 退激发时间平均数（未退激发按最大时间参与计算）
+        hop_time_mean = np.mean(hop_time)
+
+        # 退激发时间平均数（不算未退激发）
+        hop_time_mean_exclude_no_hop = np.mean(
+            [t for t in hop_time if t <= self.data["time"].iloc[-1]]
+        )
+
+        return {
+            "运行过程崩溃数量": count_crash,
+            "末尾未退激发数量": count_no_hop,
+            "退激发时间中位数": hop_time_median,
+            "退激发时间平均数": hop_time_mean,
+            "退激发时间平均数（不算未退激发）": hop_time_mean_exclude_no_hop,
+        }
 
 
 if __name__ == "__main__":
-    path = [
-        r"E:\GitHub\JADE-Analyzer\sample\1",
-        r"E:\GitHub\JADE-Analyzer\sample\1_del",
-        r"E:\GitHub\JADE-Analyzer\sample\2",
-    ]
+    path = [f"E:\\GitHub\\JADE-Analyzer\\sample\\{i}" for i in range(1, 201)]
     max_i_time = 500
     state = StateMuti(path, max_i_time)
     state.save_to_csv(r"E:\GitHub\JADE-Analyzer\output\state_muti.csv")
 
-    print(state.data)
-    print(state.count_state())
-    print(state.distribution_change())
+    # print(state.data)
+    # print(state.count_state())
+    # print(state.distribution_change())
+    print(state.description())
