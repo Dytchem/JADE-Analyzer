@@ -117,7 +117,7 @@ class CountGeom:
         return normalized
 
     def count_by_regions(self):
-        ret = pd.DataFrame({"time": self.geom_data["time"].copy()})
+        time_series = self.geom_data["time"].reset_index(drop=True)
 
         values = self.geom_data[self.value_columns].to_numpy(dtype=float)
 
@@ -128,6 +128,7 @@ class CountGeom:
             values = np.abs(values)
 
         finite = np.isfinite(values)
+        count_columns = {}
 
         for region_name, intervals in self.regions.items():
             mask = np.zeros(values.shape, dtype=bool)
@@ -137,9 +138,10 @@ class CountGeom:
                 )
 
             mask &= finite
-            ret[f"count_{region_name}"] = mask.sum(axis=1)
+            count_columns[f"count_{region_name}"] = mask.sum(axis=1)
 
-        return ret
+        count_df = pd.DataFrame(count_columns, index=time_series.index)
+        return pd.concat([time_series.rename("time"), count_df], axis=1)
 
     def save_to_csv(self, path):
         self.data.to_csv(path, index=False)

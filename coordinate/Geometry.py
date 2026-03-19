@@ -14,37 +14,66 @@ from CoordMulti import CoordMulti
 
 
 class Geometry:
-    def __init__(self, coord_multi: CoordMulti, *atoms):
-        if len(atoms) not in (2, 3, 4):
-            raise ValueError(
-                "Please provide 2 (distance), 3 (angle), or 4 (dihedral) atoms"
-            )
-
-        self.coord_multi = coord_multi
+    def __init__(self, coord_multi, *atoms, type="coord_multi"):
+        self.coord_multi = None
         self.atoms = tuple(atoms)
-        self.time = coord_multi.data["time"].copy()
 
-        self._traj_indices = self._detect_traj_indices()
-        if not self._traj_indices:
-            raise ValueError("No trajectory columns detected in coord_multi.data")
+        if type == "coord_multi":
+            if len(atoms) not in (2, 3, 4):
+                raise ValueError(
+                    "Please provide 2 (distance), 3 (angle), or 4 (dihedral) atoms"
+                )
 
-        if len(atoms) == 2:
-            self.kind = "distance"
-        elif len(atoms) == 3:
-            self.kind = "angle"
+            self.coord_multi = coord_multi
+            source_df = coord_multi.data
+
+            if len(atoms) == 2:
+                self.kind = "distance"
+            elif len(atoms) == 3:
+                self.kind = "angle"
+            else:
+                self.kind = "dihedral"
+
+            self.time = source_df["time"].copy()
+            self._traj_indices = self._detect_traj_indices(source_df)
+            if not self._traj_indices:
+                raise ValueError("No trajectory columns detected in coord_multi.data")
+
+            self.data = self._build_dataframe()
+
+        elif type == "csv":
+            self.data = pd.read_csv(coord_multi)
+            self.time = self.data["time"].copy()
+            self._traj_indices = self._detect_traj_indices(self.data)
+            self.kind = self._infer_kind_from_data()
+
+        elif type == "pickle":
+            self.data = pd.read_pickle(coord_multi)
+            self.time = self.data["time"].copy()
+            self._traj_indices = self._detect_traj_indices(self.data)
+            self.kind = self._infer_kind_from_data()
+
         else:
-            self.kind = "dihedral"
+            raise ValueError("type must be 'coord_multi' or 'csv' or 'pickle'")
 
-        self.data = self._build_dataframe()
-
-    def _detect_traj_indices(self):
+    def _detect_traj_indices(self, df):
         traj_indices = set()
         pattern = re.compile(r"_No\.(\d+)$")
-        for col in self.coord_multi.data.columns:
+        for col in df.columns:
             m = pattern.search(col)
             if m:
                 traj_indices.add(int(m.group(1)))
         return sorted(traj_indices)
+
+    def _infer_kind_from_data(self):
+        value_cols = [c for c in self.data.columns if c != "time"]
+        if any(c.startswith("distance_") for c in value_cols):
+            return "distance"
+        if any(c.startswith("angle_") for c in value_cols):
+            return "angle"
+        if any(c.startswith("dihedral_") for c in value_cols):
+            return "dihedral"
+        return "geometry"
 
     def _normalize_atom_label(self, atom_label):
         atom_label = str(atom_label).strip()
@@ -149,7 +178,8 @@ class Geometry:
         return unwrapped
 
     def _build_dataframe(self):
-        out = pd.DataFrame({"time": self.time})
+        time_series = self.time.reset_index(drop=True)
+        value_columns = {}
 
         atom_text = "-".join(self.atoms)
         for traj_index in self._traj_indices:
@@ -163,9 +193,10 @@ class Geometry:
                 value = self._dihedral(points[0], points[1], points[2], points[3])
                 value = self._unwrap_degrees(value)
 
-            out[f"{self.kind}_{atom_text}_No.{traj_index}"] = value
+            value_columns[f"{self.kind}_{atom_text}_No.{traj_index}"] = value
 
-        return out
+        value_df = pd.DataFrame(value_columns, index=time_series.index)
+        return pd.concat([time_series.rename("time"), value_df], axis=1)
 
     def save_to_csv(self, path):
         self.data.to_csv(path, index=False)

@@ -36,7 +36,16 @@ class PlotCount:
 
         plt.rcParams["axes.unicode_minus"] = False
 
-    def plot(self, save_path=None):
+    def plot(
+        self,
+        save_path=None,
+        show=True,
+        title=None,
+        x_min=None,
+        x_max=None,
+        y_min=None,
+        y_max=None,
+    ):
         plt.figure()
 
         for col in self.count_columns:
@@ -45,15 +54,32 @@ class PlotCount:
 
         plt.xlabel("时间 (fs)", fontproperties=self.font)
         plt.ylabel("数量", fontproperties=self.font)
-        plt.title("几何构型数量随时间变化", fontproperties=self.font)
+        if x_min is not None or x_max is not None:
+            plt.xlim(left=x_min, right=x_max)
+        if y_min is not None or y_max is not None:
+            plt.ylim(bottom=y_min, top=y_max)
+        if title is None:
+            title = "几何构型数量随时间变化"
+        plt.title(title, fontproperties=self.font)
         plt.legend(prop=self.font)
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
         if save_path is not None:
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(save_path)
-        plt.show()
+        if show:
+            plt.show()
 
-    def plot_normalized(self, save_path=None):
+    def plot_normalized(
+        self,
+        save_path=None,
+        show=True,
+        title=None,
+        x_min=None,
+        x_max=None,
+        y_min=None,
+        y_max=None,
+    ):
         plt.figure()
 
         total = self.origin.n
@@ -66,13 +92,21 @@ class PlotCount:
 
         plt.xlabel("时间 (fs)", fontproperties=self.font)
         plt.ylabel("比例", fontproperties=self.font)
-        plt.title("几何构型占比随时间变化", fontproperties=self.font)
+        if x_min is not None or x_max is not None:
+            plt.xlim(left=x_min, right=x_max)
+        if y_min is not None or y_max is not None:
+            plt.ylim(bottom=y_min, top=y_max)
+        if title is None:
+            title = "几何构型占比随时间变化"
+        plt.title(title, fontproperties=self.font)
         plt.legend(prop=self.font)
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
         if save_path is not None:
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(save_path)
-        plt.show()
+        if show:
+            plt.show()
 
 
 if __name__ == "__main__":

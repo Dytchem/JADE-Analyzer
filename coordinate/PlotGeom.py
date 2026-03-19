@@ -140,7 +140,17 @@ class PlotGeom:
         print(f"奇数条带: {odd_count}")
         print("=" * 50)
 
-    def plot(self, y_min=None, y_max=None, show_band_stat=True, save_path=None):
+    def plot(
+        self,
+        x_min=None,
+        x_max=None,
+        y_min=None,
+        y_max=None,
+        show_band_stat=True,
+        save_path=None,
+        show=True,
+        title=None,
+    ):
         fig, ax = plt.subplots(figsize=(8, 6))
         time = self.data["time"].to_numpy(dtype=float)
 
@@ -164,37 +174,59 @@ class PlotGeom:
             ax.set_ylim(y_min, y_max)
             self.print_band_summary(band_counts)
 
-            plt.tight_layout()
+            # plt.tight_layout()
         else:
             if y_min is not None or y_max is not None:
                 ax.set_ylim(y_min, y_max)
-            plt.tight_layout()
+            # plt.tight_layout()
+
+        if x_min is not None or x_max is not None:
+            ax.set_xlim(left=x_min, right=x_max)
 
         self._set_labels(ax)
+        if title is None:
+            title = {
+                "distance": "键长随时间变化",
+                "angle": "键角随时间变化",
+                "dihedral": "二面角随时间变化",
+            }.get(self.kind, "几何参数随时间变化")
+        ax.set_title(title, fontproperties=self.font)
         ax.grid(True, linestyle="--", alpha=0.6)
 
         if save_path is not None:
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             fig.savefig(save_path)
-        plt.show()
+        if show:
+            plt.show()
+
+        return fig, ax, band_counts
 
 
 def load_and_plot(
     paths,
     max_i_time,
     *atoms,
+    x_min=None,
+    x_max=None,
     y_min=None,
     y_max=None,
     show_band_stat=True,
     save_path=None,
+    show=True,
+    title=None,
 ):
     coord = CoordMulti(paths, max_i_time)
     geom = Geometry(coord, *atoms)
     plotter = PlotGeom(geom)
-    plotter.plot(
+    return plotter.plot(
+        x_min=x_min,
+        x_max=x_max,
         y_min=y_min,
         y_max=y_max,
         show_band_stat=show_band_stat,
         save_path=save_path,
+        show=show,
+        title=title,
     )
 
 

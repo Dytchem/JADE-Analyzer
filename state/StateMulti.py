@@ -64,18 +64,19 @@ class StateMulti:
         self.data.to_pickle(path)
 
     def count_state(self):
-        ret = pd.DataFrame({"time": self.data["time"]})
-        ret["count_state1"] = self.data.iloc[:, 1:].apply(
-            lambda x: (x == 1).sum(), axis=1
-        )
-        ret["count_state2"] = self.data.iloc[:, 1:].apply(
-            lambda x: (x == 2).sum(), axis=1
-        )
-        ret["count_crash"] = self.data.iloc[:, 1:].apply(
-            lambda x: (x == 0).sum(), axis=1
-        )
+        state_values = self.data.iloc[:, 1:].to_numpy(dtype=int)
+        count_state1 = np.sum(state_values == 1, axis=1)
+        count_state2 = np.sum(state_values == 2, axis=1)
+        count_crash = np.sum(state_values == 0, axis=1)
 
-        return ret
+        return pd.DataFrame(
+            {
+                "time": self.data["time"].to_numpy(copy=True),
+                "count_state1": count_state1,
+                "count_state2": count_state2,
+                "count_crash": count_crash,
+            }
+        )
 
     def distribution_change(self):
         hop_time = []  # 2->11111111(00000000)
@@ -108,6 +109,7 @@ class StateMulti:
     def description(self):
         dc = self.distribution_change()
         hop_time = dc["hop_time"]
+        fit_hop_time = self._exp_decay_hop_time()
 
         # 最大时间内崩溃数量
         count_crash = len(dc["crash_time"])
@@ -143,7 +145,43 @@ class StateMulti:
             "退激发时间中位数": hop_time_median,
             "退激发时间平均数": hop_time_mean,
             "退激发时间平均数（不算未退激发）": hop_time_mean_exclude_no_hop,
+            "退激发时间（指数衰减拟合）": fit_hop_time,
         }
+
+    def _exp_decay_hop_time(self):
+        count_df = self.count_state()
+        total = self.n
+        if total <= 0:
+            return np.nan
+
+        time = count_df["time"].to_numpy(dtype=float)
+        y = count_df["count_state2"].to_numpy(dtype=float) / float(total)
+
+        # Start fitting from the first point where normalized S1 population is not 1.
+        start_idx_candidates = np.where(np.abs(y - 1.0) > 1e-12)[0]
+        if len(start_idx_candidates) == 0:
+            return np.nan
+
+        start_idx = int(start_idx_candidates[0])
+        t0 = float(time[start_idx])
+
+        t_seg = time[start_idx:]
+        y_seg = y[start_idx:]
+
+        # Exponential fit uses only positive points for log transform.
+        valid = np.isfinite(t_seg) & np.isfinite(y_seg) & (y_seg > 0)
+        if np.count_nonzero(valid) < 2:
+            return np.nan
+
+        x = t_seg[valid] - t0
+        log_y = np.log(y_seg[valid])
+
+        slope, intercept = np.polyfit(x, log_y, 1)
+        if slope >= 0:
+            return np.nan
+
+        half_life = np.log(2.0) / (-slope)
+        return t0 + half_life
 
 
 if __name__ == "__main__":

@@ -26,7 +26,16 @@ class PlotCount:
         self.count_state = state_multi.count_state()
         self.font = font
 
-    def plot(self, save_path=None):
+    def plot(
+        self,
+        save_path=None,
+        show=True,
+        title=None,
+        x_min=None,
+        x_max=None,
+        y_min=None,
+        y_max=None,
+    ):
         plt.figure()
         plt.plot(self.count_state["time"], self.count_state["count_state1"], label="S0")
         plt.plot(self.count_state["time"], self.count_state["count_state2"], label="S1")
@@ -36,12 +45,29 @@ class PlotCount:
         plt.xlabel("时间 (fs)", fontproperties=self.font)
         plt.ylabel("数量", fontproperties=self.font)
         plt.legend()
-        plt.title("S0、S1和Crash数量随时间的变化", fontproperties=self.font)
+        if x_min is not None or x_max is not None:
+            plt.xlim(left=x_min, right=x_max)
+        if y_min is not None or y_max is not None:
+            plt.ylim(bottom=y_min, top=y_max)
+        if title is None:
+            title = "S0、S1和Crash数量随时间的变化"
+        plt.title(title, fontproperties=self.font)
         if save_path is not None:
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(save_path)
-        plt.show()
+        if show:
+            plt.show()
 
-    def plot_normalized(self, save_path=None):
+    def plot_normalized(
+        self,
+        save_path=None,
+        show=True,
+        title=None,
+        x_min=None,
+        x_max=None,
+        y_min=None,
+        y_max=None,
+    ):
         plt.figure()
         total = self.origin.n
         plt.plot(
@@ -62,10 +88,18 @@ class PlotCount:
         plt.xlabel("时间 (fs)", fontproperties=self.font)
         plt.ylabel("比例", fontproperties=self.font)
         plt.legend()
-        plt.title("S0、S1和Crash占比随时间的变化", fontproperties=self.font)
+        if x_min is not None or x_max is not None:
+            plt.xlim(left=x_min, right=x_max)
+        if y_min is not None or y_max is not None:
+            plt.ylim(bottom=y_min, top=y_max)
+        if title is None:
+            title = "S0、S1和Crash占比随时间的变化"
+        plt.title(title, fontproperties=self.font)
         if save_path is not None:
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(save_path)
-        plt.show()
+        if show:
+            plt.show()
 
 
 if __name__ == "__main__":

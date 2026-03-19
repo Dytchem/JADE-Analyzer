@@ -42,7 +42,7 @@ class CoordMulti:
         else:
             raise ValueError("type must be 'folder' or 'csv' or 'pickle'")
 
-        self.n = len([c for c in self.data.columns if c.endswith("_No.1")]) // 3
+        self.n = (self.data.shape[1] - 1) // 3
         self.time_interval = self.data["time"][1] - self.data["time"][0]
 
     def set_time_series(self, time_series):
