@@ -1,18 +1,22 @@
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 from CoordMulti import CoordMulti
 from CountGeom import CountGeom
 from Geometry import Geometry
 
 
+DEFAULT_FONT_PATH = (
+    Path(__file__).resolve().parent.parent / "font" / "SourceHanSansSC-Regular.otf"
+)
+
+
 class PlotCount:
     def __init__(
         self,
         count_geom: CountGeom,
-        font=fm.FontProperties(
-            fname=r"E:\GitHub\JADE-Analyzer\SourceHanSansSC-Regular.otf"
-        ),
+        font=fm.FontProperties(fname=str(DEFAULT_FONT_PATH)),
     ):
         self.origin = count_geom
         self.count_data = count_geom.data

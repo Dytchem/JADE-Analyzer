@@ -3,6 +3,12 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from pathlib import Path
+
+
+DEFAULT_FONT_PATH = (
+    Path(__file__).resolve().parent.parent / "font" / "SourceHanSansSC-Regular.otf"
+)
 
 
 def read_from_folder_single(path, max_i_time):
@@ -64,7 +70,7 @@ def plot_count_state(
     time,
     count_state1,
     count_state2,
-    font=fm.FontProperties(fname="./SourceHanSansSC-Regular.otf"),
+    font=fm.FontProperties(fname=str(DEFAULT_FONT_PATH)),
     save_path=None,
 ):
     plt.figure()
@@ -81,7 +87,9 @@ def plot_count_state(
 
 
 def plot_t0_hist(
-    t0s, font=fm.FontProperties(fname="./SourceHanSansSC-Regular.otf"), save_path=None
+    t0s,
+    font=fm.FontProperties(fname=str(DEFAULT_FONT_PATH)),
+    save_path=None,
 ):
     plt.figure()
     plt.hist(t0s[t0s >= 0], bins=50, edgecolor="black")

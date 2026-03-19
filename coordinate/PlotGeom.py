@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
@@ -8,13 +9,16 @@ from CoordMulti import CoordMulti
 from Geometry import Geometry
 
 
+DEFAULT_FONT_PATH = (
+    Path(__file__).resolve().parent.parent / "font" / "SourceHanSansSC-Regular.otf"
+)
+
+
 class PlotGeom:
     def __init__(
         self,
         geometry: Geometry,
-        font=fm.FontProperties(
-            fname=r"E:\GitHub\JADE-Analyzer\SourceHanSansSC-Regular.otf"
-        ),
+        font=fm.FontProperties(fname=str(DEFAULT_FONT_PATH)),
     ):
         self.origin = geometry
         self.data = geometry.data

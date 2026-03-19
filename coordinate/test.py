@@ -1,9 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.font_manager as fm
+from pathlib import Path
 
 # === 字体配置（必须在绘图前设置）===
-font_path = "/home/huangdeqing/.local/share/fonts/SourceHanSansSC-Regular.otf"
+font_path = str(
+    Path(__file__).resolve().parent.parent / "font" / "SourceHanSansSC-Regular.otf"
+)
 zh_font = fm.FontProperties(fname=font_path)
 plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
 # ================================

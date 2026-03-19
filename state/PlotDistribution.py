@@ -1,15 +1,19 @@
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from pathlib import Path
 from state.StateMulti import StateMuti
+
+
+DEFAULT_FONT_PATH = (
+    Path(__file__).resolve().parent.parent / "font" / "SourceHanSansSC-Regular.otf"
+)
 
 
 class PlotDistribution:
     def __init__(
         self,
         state_muti: StateMuti,
-        font=fm.FontProperties(
-            fname=r"E:\GitHub\JADE-Analyzer\SourceHanSansSC-Regular.otf"
-        ),
+        font=fm.FontProperties(fname=str(DEFAULT_FONT_PATH)),
     ):
         self.origin = state_muti
         self.distribution = state_muti.distribution_change()
