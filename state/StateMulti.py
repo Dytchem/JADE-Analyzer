@@ -176,7 +176,12 @@ class StateMulti:
         x = t_seg[valid] - t0
         log_y = np.log(y_seg[valid])
 
-        slope, intercept = np.polyfit(x, log_y, 1)
+        # Constrained model: y = exp(-k * (t - t0)), i.e. y(t0)=1.
+        denom = np.dot(x, x)
+        if denom <= 0:
+            return np.nan
+
+        slope = np.dot(x, log_y) / denom
         if slope >= 0:
             return np.nan
 
