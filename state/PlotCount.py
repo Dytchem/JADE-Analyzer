@@ -107,6 +107,7 @@ class PlotCount:
         save_path=None,
         show=True,
         title="S1归一化真实曲线与指数拟合",
+        fit_max_time=None,
         x_min=None,
         x_max=None,
         y_min=None,
@@ -129,6 +130,8 @@ class PlotCount:
         t_seg = time[start_idx:]
         y_seg = y[start_idx:]
         valid = np.isfinite(t_seg) & np.isfinite(y_seg) & (y_seg > 0)
+        if fit_max_time is not None:
+            valid &= t_seg <= float(fit_max_time)
         if np.count_nonzero(valid) < 2:
             raise ValueError("Not enough positive points for exponential fitting")
 
@@ -152,6 +155,8 @@ class PlotCount:
 
         y_fit = np.full_like(y, np.nan, dtype=float)
         fit_mask = time >= t0
+        if fit_max_time is not None:
+            fit_mask &= time <= float(fit_max_time)
         y_fit[fit_mask] = np.exp(-k * (time[fit_mask] - t0))
 
         plt.figure(figsize=(8, 6))
@@ -171,6 +176,8 @@ class PlotCount:
             f"半衰期 = {half_life:.2f} fs\n"
             f"拟合退激发时间 = {fit_hop_time:.2f} fs"
         )
+        if fit_max_time is not None:
+            text += f"\n拟合最大时间 = {float(fit_max_time):.2f} fs"
         plt.text(
             0.02,
             0.98,
@@ -203,6 +210,7 @@ class PlotCount:
             "t0": t0,
             "half_life": half_life,
             "fit_hop_time": fit_hop_time,
+            "fit_max_time": fit_max_time,
             "slope": slope,
             "intercept": intercept,
         }

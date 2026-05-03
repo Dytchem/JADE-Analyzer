@@ -14,9 +14,10 @@ from CoordMulti import CoordMulti
 
 
 class Geometry:
-    def __init__(self, coord_multi, *atoms, type="coord_multi"):
+    def __init__(self, coord_multi, *atoms, type="coord_multi", unwrap_dihedral=True):
         self.coord_multi = None
         self.atoms = tuple(atoms)
+        self.unwrap_dihedral = bool(unwrap_dihedral)
 
         if type == "coord_multi":
             if len(atoms) not in (2, 3, 4):
@@ -46,12 +47,14 @@ class Geometry:
             self.time = self.data["time"].copy()
             self._traj_indices = self._detect_traj_indices(self.data)
             self.kind = self._infer_kind_from_data()
+            self._apply_unwrap_config_to_loaded_data()
 
         elif type == "pickle":
             self.data = pd.read_pickle(coord_multi)
             self.time = self.data["time"].copy()
             self._traj_indices = self._detect_traj_indices(self.data)
             self.kind = self._infer_kind_from_data()
+            self._apply_unwrap_config_to_loaded_data()
 
         else:
             raise ValueError("type must be 'coord_multi' or 'csv' or 'pickle'")
@@ -177,6 +180,29 @@ class Geometry:
 
         return unwrapped
 
+    @staticmethod
+    def _rewrap_degrees(angle_deg):
+        angle_deg = np.asarray(angle_deg, dtype=float)
+        wrapped = angle_deg.copy()
+
+        finite_mask = np.isfinite(angle_deg)
+        if finite_mask.any():
+            wrapped[finite_mask] = ((angle_deg[finite_mask] + 180.0) % 360.0) - 180.0
+
+        return wrapped
+
+    def _apply_unwrap_config_to_loaded_data(self):
+        if self.kind != "dihedral":
+            return
+
+        dihedral_cols = [c for c in self.data.columns if c.startswith("dihedral_")]
+        for col in dihedral_cols:
+            values = self.data[col].to_numpy(dtype=float)
+            if self.unwrap_dihedral:
+                self.data[col] = self._unwrap_degrees(values)
+            else:
+                self.data[col] = self._rewrap_degrees(values)
+
     def _build_dataframe(self):
         time_series = self.time.reset_index(drop=True)
         value_columns = {}
@@ -191,7 +217,8 @@ class Geometry:
                 value = self._angle(points[0], points[1], points[2])
             else:
                 value = self._dihedral(points[0], points[1], points[2], points[3])
-                value = self._unwrap_degrees(value)
+                if self.unwrap_dihedral:
+                    value = self._unwrap_degrees(value)
 
             value_columns[f"{self.kind}_{atom_text}_No.{traj_index}"] = value
 

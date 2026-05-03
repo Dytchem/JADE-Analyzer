@@ -3,3 +3,4 @@ sample/
 test/
 **/__pycache__/
 bylw/
+output/

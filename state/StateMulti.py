@@ -106,10 +106,10 @@ class StateMulti:
         crash_time.sort()
         return {"hop_time": hop_time, "crash_time": crash_time}
 
-    def description(self):
+    def description(self, fit_max_time=None):
         dc = self.distribution_change()
         hop_time = dc["hop_time"]
-        fit_hop_time = self._exp_decay_hop_time()
+        fit_hop_time = self._exp_decay_hop_time(fit_max_time=fit_max_time)
 
         # 最大时间内崩溃数量
         count_crash = len(dc["crash_time"])
@@ -148,7 +148,7 @@ class StateMulti:
             "退激发时间（指数衰减拟合）": fit_hop_time,
         }
 
-    def _exp_decay_hop_time(self):
+    def _exp_decay_hop_time(self, fit_max_time=None):
         count_df = self.count_state()
         total = self.n
         if total <= 0:
@@ -170,6 +170,8 @@ class StateMulti:
 
         # Exponential fit uses only positive points for log transform.
         valid = np.isfinite(t_seg) & np.isfinite(y_seg) & (y_seg > 0)
+        if fit_max_time is not None:
+            valid &= t_seg <= float(fit_max_time)
         if np.count_nonzero(valid) < 2:
             return np.nan
 
