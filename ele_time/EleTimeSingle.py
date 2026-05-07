@@ -20,18 +20,20 @@ class EleTimeSingle:
     Reads and parses ele_time.out files containing electronic state evolution data.
     """
 
-    def __init__(self, path: str, type: str = "folder"):
+    def __init__(self, path: str, max_i_time: int, type: str = "folder"):
         """
         Initialize the EleTimeSingle instance.
         
         Args:
             path: Path to the ele_time.out file or directory
+            max_i_time: Maximum step index (last step number)
             type: "file" for direct file path, "folder" for directory containing ele_time.out
         
         Raises:
             FileNotFoundError: If the specified path does not exist
         """
         self.path = Path(path)
+        self.max_i_time = max_i_time
         self.type = type
         
         if type == "folder":
@@ -46,12 +48,6 @@ class EleTimeSingle:
         self._parse_file()
         # Convert to DataFrame for compatibility with other modules
         self.data = self.to_dataframe()
-        # Set max_i_time for BaseData interface compatibility
-        # Use the last step number from raw data, which should be max_i_time
-        if self._raw_data:
-            self.max_i_time = self._raw_data[-1]['step']
-        else:
-            self.max_i_time = 0
     
     def _parse_complex(self, value_str: str) -> complex:
         """
