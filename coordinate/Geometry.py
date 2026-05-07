@@ -102,7 +102,8 @@ class Geometry:
         else:
             self.kind = "dihedral"
         
-        self.time = coord_single.data["time"].copy()
+        # Use DataFrame index as time (step) since CoordSingle doesn't have real time
+        self.time = coord_single.data.index.values.copy()
         self.data = self._build_single_dataframe()
     
     def _init_from_coord_multi(self, coord_multi: CoordMulti):
@@ -123,14 +124,19 @@ class Geometry:
         else:
             self.kind = "dihedral"
         
-        self.time = coord_multi.data["time"].copy()
+        # Use DataFrame index as time (step) since CoordMulti doesn't have real time
+        self.time = coord_multi.data.index.values.copy()
         self._traj_indices = list(range(1, self.n + 1))
         self.data = self._build_multi_dataframe()
     
     def _init_from_csv(self, path: str):
         """Initialize from CSV file."""
         self.data = pd.read_csv(path)
-        self.time = self.data["time"].copy()
+        # Use time column if available, otherwise use index
+        if 'time' in self.data.columns:
+            self.time = self.data["time"].copy()
+        else:
+            self.time = self.data.index.values.copy()
         self._traj_indices = self._detect_traj_indices(self.data)
         self.n = len(self._traj_indices) if self._traj_indices else 0
         self.kind = self._infer_kind_from_data()
@@ -139,7 +145,11 @@ class Geometry:
     def _init_from_pickle(self, path: str):
         """Initialize from Pickle file."""
         self.data = pd.read_pickle(path)
-        self.time = self.data["time"].copy()
+        # Use time column if available, otherwise use index
+        if 'time' in self.data.columns:
+            self.time = self.data["time"].copy()
+        else:
+            self.time = self.data.index.values.copy()
         self._traj_indices = self._detect_traj_indices(self.data)
         self.n = len(self._traj_indices) if self._traj_indices else 0
         self.kind = self._infer_kind_from_data()
@@ -317,7 +327,8 @@ class Geometry:
     
     def _build_single_dataframe(self) -> pd.DataFrame:
         """Build DataFrame for single trajectory."""
-        time_series = self.time.reset_index(drop=True)
+        # Don't create time column - Geometry inherits from Coord which doesn't have real time
+        # Time can be added later via set_time_series()
         
         points = [self._atom_xyz_single(atom) for atom in self.atoms]
         
@@ -331,12 +342,13 @@ class Geometry:
                 value = self._unwrap_degrees(value)
         
         atom_text = "-".join(self.atoms)
-        value_df = pd.DataFrame({f"{self.kind}_{atom_text}": value}, index=time_series.index)
-        return pd.concat([time_series.rename("time"), value_df], axis=1)
+        return pd.DataFrame({f"{self.kind}_{atom_text}": value})
     
     def _build_multi_dataframe(self) -> pd.DataFrame:
         """Build DataFrame for multi trajectory."""
-        time_series = self.time.reset_index(drop=True)
+        # Don't create time column - Geometry inherits from Coord which doesn't have real time
+        # Time can be added later via set_time_series()
+        
         value_columns = {}
         
         atom_text = "-".join(self.atoms)
@@ -354,19 +366,45 @@ class Geometry:
             
             value_columns[f"{self.kind}_{atom_text}_No.{traj_index}"] = value
         
-        value_df = pd.DataFrame(value_columns, index=time_series.index)
-        return pd.concat([time_series.rename("time"), value_df], axis=1)
+        return pd.DataFrame(value_columns)
     
     def has_real_time(self) -> bool:
         """Check if data has real time values."""
-        time_vals = self.data['time'].values
+        time_vals = self.time
         if len(time_vals) < 2:
             return False
         return np.issubdtype(time_vals.dtype, np.floating)
     
     def get_time_series(self) -> np.ndarray:
         """Get the time series as numpy array."""
-        return self.data['time'].values
+        return self.time
+    
+    def set_time_series(self, time_series):
+        """
+        Set the time series for this geometry data.
+        
+        Args:
+            time_series: 1D array-like of time values
+            
+        Raises:
+            ValueError: If time_series is not a 1D sequence or length doesn't match
+        """
+        import numpy as np
+        
+        time_array = np.asarray(time_series)
+        if time_array.ndim != 1:
+            raise ValueError("time_series must be a 1D sequence")
+        
+        if len(time_array) != len(self.data):
+            raise ValueError(f"time_series length {len(time_array)} does not match data length {len(self.data)}")
+        
+        self.time = time_array
+        
+        # Add time column to data
+        if 'time' in self.data.columns:
+            self.data['time'] = time_array
+        else:
+            self.data.insert(0, 'time', time_array)
     
     def save_to_csv(self, path: str):
         """Save data to CSV file."""

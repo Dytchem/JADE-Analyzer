@@ -22,7 +22,7 @@ class BaseData:
     - Data integration support
     
     Key design:
-    - All data has a 'step' column (integer frame index)
+    - Step is represented by DataFrame index (0, 1, 2, ...)
     - Only some data has a 'time' column (real time values)
     """
     
@@ -31,21 +31,14 @@ class BaseData:
         Initialize the base data class.
         
         Args:
-            data: DataFrame containing the data with at least a 'step' column
+            data: DataFrame containing the data. Index represents step.
             max_i_time: Maximum time index
             source_type: Type identifier (e.g., 'state', 'coordinate', 'di', 'energy')
         """
         self.data = data
         self.max_i_time = max_i_time
         self.source_type = source_type
-        self._validate_step_column()
         self.time_interval = self._calculate_time_interval()
-    
-    def _validate_step_column(self):
-        """Validate that the DataFrame has a 'step' column."""
-        if 'step' not in self.data.columns:
-            # If no step column, create it from index
-            self.data.insert(0, 'step', np.arange(len(self.data)))
     
     def _calculate_time_interval(self):
         """Calculate the time interval between consecutive frames."""
@@ -71,10 +64,9 @@ class BaseData:
                 f"time_series length {len(time_array)} does not match data length {len(self.data)}"
             )
 
-        # Insert time column after step if it doesn't exist
+        # Insert time column if it doesn't exist
         if 'time' not in self.data.columns:
-            step_idx = self.data.columns.get_loc('step')
-            self.data.insert(step_idx + 1, "time", time_array)
+            self.data.insert(0, "time", time_array)
         else:
             self.data.loc[:, "time"] = time_array
         self.time_interval = self._calculate_time_interval()
@@ -111,9 +103,9 @@ class BaseData:
         Get the step series as a numpy array.
         
         Returns:
-            np.ndarray: Step indices
+            np.ndarray: Step indices (DataFrame index)
         """
-        return self.data['step'].values
+        return self.data.index.values
     
     def save_to_csv(self, path):
         """Save data to CSV file."""
@@ -155,7 +147,7 @@ class BaseMultiData(BaseData):
             list: Column names for the specified trajectory
         """
         suffix = f'_No.{trajectory_idx}'
-        return [col for col in self.data.columns if col in ['step', 'time'] or col.endswith(suffix)]
+        return [col for col in self.data.columns if col in ['time'] or col.endswith(suffix)]
     
     def get_trajectory_data(self, trajectory_idx: int):
         """

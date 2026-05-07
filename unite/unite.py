@@ -5,9 +5,9 @@ This module provides classes to combine different types of trajectory data
 while ensuring data consistency and enabling shared time series access.
 
 Key design:
-- All data sources have a 'step' column (integer frame index)
+- Step is represented by DataFrame index (0, 1, 2, ...)
 - Some data sources have a 'time' column (real time values)
-- Merge is done on 'step' column
+- Merge is done on index (step)
 - Common time axis is derived from sources with real time
 """
 
@@ -56,7 +56,7 @@ class DataUniter:
         if self.data_sources:
             first_source = next(iter(self.data_sources.values()))
             
-            # Check step count consistency
+            # Check step count consistency (using DataFrame index)
             if len(data) != len(first_source):
                 raise ValueError(
                     f"Data length {len(data)} does not match existing sources ({len(first_source)})"
@@ -111,30 +111,39 @@ class DataUniter:
         else:
             # No real time sources, use step indices as time
             first_source = next(iter(self.data_sources.values()))
-            ref_time = first_source.data['step'].values
+            ref_time = first_source.data.index.values.astype(float)
         
-        # Merge all data sources using step
+        # Merge all data sources
+        # First source sets the index (step), subsequent sources align by index
         merged = None
+        time_added = False  # Track if time column has been added
+        
         for name, data in self.data_sources.items():
             temp = data.data.copy()
             
-            # Add/update time column with reference time
-            if 'time' not in temp.columns:
-                step_idx = temp.columns.get_loc('step')
-                temp.insert(step_idx + 1, 'time', ref_time)
-            else:
-                temp['time'] = ref_time
+            # Remove any existing time columns from all sources except the first one
+            # This prevents duplicate time columns when sources have been modified by set_time_series
+            if time_added and 'time' in temp.columns:
+                temp = temp.drop('time', axis=1)
             
-            # Rename columns to include source name (except step and time)
-            cols_to_rename = [col for col in temp.columns if col not in ['step', 'time']]
+            # Only add time column from the first source or from reference
+            if not time_added:
+                if 'time' not in temp.columns:
+                    temp.insert(0, 'time', ref_time)
+                else:
+                    temp['time'] = ref_time
+                time_added = True
+            
+            # Rename columns to include source name (except time)
+            cols_to_rename = [col for col in temp.columns if col != 'time']
             rename_map = {col: f"{name}_{col}" for col in cols_to_rename}
             temp = temp.rename(columns=rename_map)
             
             if merged is None:
                 merged = temp
             else:
-                # Merge on step - should be exact match
-                merged = pd.merge(merged, temp, on=['step', 'time'], how='inner')
+                # Concatenate horizontally, aligning by index
+                merged = pd.concat([merged, temp], axis=1)
         
         self.unified_data = merged
         
@@ -161,10 +170,10 @@ class DataUniter:
         return self.unified_data['time'].values
     
     def get_step_series(self) -> np.ndarray:
-        """Get the unified step series."""
+        """Get the unified step series (DataFrame index)."""
         if self.unified_data is None:
             return np.array([])
-        return self.unified_data['step'].values
+        return self.unified_data.index.values
     
     def has_real_time(self) -> bool:
         """Check if any source has real time values."""
@@ -292,7 +301,7 @@ class MultiTrajectoryUniter:
             for traj_idx in range(1, self.n_trajectories + 1):
                 traj_data = data.get_trajectory_data(traj_idx)
                 for col in traj_data.columns:
-                    if col in ['step', 'time']:
+                    if col == 'time':
                         continue
                     stats.append({
                         'source': name,
