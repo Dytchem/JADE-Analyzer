@@ -3,6 +3,12 @@ Unite module for integrating multiple data sources.
 
 This module provides classes to combine different types of trajectory data
 while ensuring data consistency and enabling shared time series access.
+
+Key design:
+- All data sources have a 'step' column (integer frame index)
+- Some data sources have a 'time' column (real time values)
+- Merge is done on 'step' column
+- Common time axis is derived from sources with real time
 """
 
 from typing import List, Tuple, Type, Union
@@ -18,14 +24,14 @@ class DataUniter:
     Class for uniting multiple data sources from the same trajectory.
     
     Ensures data consistency by:
-    - Validating matching time indices
+    - Validating matching step indices
     - Synchronizing time series across sources
     - Providing unified access to combined data
     
     Time axis matching rules:
     - When both sources have real time: time axes must match exactly
     - When one has real time and one doesn't: step counts must match
-    - When neither has real time: step counts must match
+    - When neither has real time: step counts must match, use step as time
     """
     
     def __init__(self):
@@ -105,33 +111,40 @@ class DataUniter:
         else:
             # No real time sources, use step indices as time
             first_source = next(iter(self.data_sources.values()))
-            ref_time = np.arange(len(first_source))
+            ref_time = first_source.data['step'].values
         
-        # Merge all data sources using the reference time
+        # Merge all data sources using step
         merged = None
         for name, data in self.data_sources.items():
             temp = data.data.copy()
             
-            # Ensure time column matches reference time
-            temp['time'] = ref_time
+            # Add/update time column with reference time
+            if 'time' not in temp.columns:
+                step_idx = temp.columns.get_loc('step')
+                temp.insert(step_idx + 1, 'time', ref_time)
+            else:
+                temp['time'] = ref_time
             
-            non_time_cols = [col for col in temp.columns if col != 'time']
-            temp.columns = ['time'] + [f"{name}_{col}" for col in non_time_cols]
+            # Rename columns to include source name (except step and time)
+            cols_to_rename = [col for col in temp.columns if col not in ['step', 'time']]
+            rename_map = {col: f"{name}_{col}" for col in cols_to_rename}
+            temp = temp.rename(columns=rename_map)
             
             if merged is None:
                 merged = temp
             else:
-                # Merge on time - should be exact match since we set same time for all
-                merged = pd.merge(merged, temp, on='time', how='inner')
+                # Merge on step - should be exact match
+                merged = pd.merge(merged, temp, on=['step', 'time'], how='inner')
         
         self.unified_data = merged
         
         # Update time series for sources without real time
-        if real_time_sources and self.unified_data is not None:
+        if real_time_sources and self.unified_data is not None and len(self.unified_data) > 0:
             real_time = self.unified_data['time'].values
-            for name, data in self.data_sources.items():
-                if not data.has_real_time():
-                    data.set_time_series(real_time)
+            if len(real_time) > 0:
+                for name, data in self.data_sources.items():
+                    if not data.has_real_time():
+                        data.set_time_series(real_time)
     
     def get_unified_data(self) -> pd.DataFrame:
         """Get the merged DataFrame containing all data sources."""
@@ -146,6 +159,12 @@ class DataUniter:
         if self.unified_data is None:
             return np.array([])
         return self.unified_data['time'].values
+    
+    def get_step_series(self) -> np.ndarray:
+        """Get the unified step series."""
+        if self.unified_data is None:
+            return np.array([])
+        return self.unified_data['step'].values
     
     def has_real_time(self) -> bool:
         """Check if any source has real time values."""
@@ -273,7 +292,7 @@ class MultiTrajectoryUniter:
             for traj_idx in range(1, self.n_trajectories + 1):
                 traj_data = data.get_trajectory_data(traj_idx)
                 for col in traj_data.columns:
-                    if col == 'time':
+                    if col in ['step', 'time']:
                         continue
                     stats.append({
                         'source': name,

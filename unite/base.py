@@ -16,10 +16,14 @@ class BaseData:
     Abstract base class for all trajectory data types.
     
     Provides common functionality for:
-    - Time series management
+    - Step and time series management
     - Data validation
     - Saving to various formats
     - Data integration support
+    
+    Key design:
+    - All data has a 'step' column (integer frame index)
+    - Only some data has a 'time' column (real time values)
     """
     
     def __init__(self, data: pd.DataFrame, max_i_time: int, source_type: str):
@@ -27,24 +31,25 @@ class BaseData:
         Initialize the base data class.
         
         Args:
-            data: DataFrame containing the data with at least a 'time' column
+            data: DataFrame containing the data with at least a 'step' column
             max_i_time: Maximum time index
             source_type: Type identifier (e.g., 'state', 'coordinate', 'di', 'energy')
         """
         self.data = data
         self.max_i_time = max_i_time
         self.source_type = source_type
-        self._validate_time_column()
+        self._validate_step_column()
         self.time_interval = self._calculate_time_interval()
     
-    def _validate_time_column(self):
-        """Validate that the DataFrame has a 'time' column."""
-        if 'time' not in self.data.columns:
-            raise ValueError("DataFrame must contain a 'time' column")
+    def _validate_step_column(self):
+        """Validate that the DataFrame has a 'step' column."""
+        if 'step' not in self.data.columns:
+            # If no step column, create it from index
+            self.data.insert(0, 'step', np.arange(len(self.data)))
     
     def _calculate_time_interval(self):
         """Calculate the time interval between consecutive frames."""
-        if len(self.data) < 2:
+        if 'time' not in self.data.columns or len(self.data) < 2:
             return np.nan
         return float(self.data['time'].iloc[1] - self.data['time'].iloc[0])
     
@@ -66,18 +71,24 @@ class BaseData:
                 f"time_series length {len(time_array)} does not match data length {len(self.data)}"
             )
 
-        self.data.loc[:, "time"] = time_array
+        # Insert time column after step if it doesn't exist
+        if 'time' not in self.data.columns:
+            step_idx = self.data.columns.get_loc('step')
+            self.data.insert(step_idx + 1, "time", time_array)
+        else:
+            self.data.loc[:, "time"] = time_array
         self.time_interval = self._calculate_time_interval()
     
     def has_real_time(self):
         """
-        Check if the data has real time values (float) or just indices (integer).
+        Check if the data has real time values.
         
         Returns:
-            bool: True if time values are floats (indicating real time data)
+            bool: True if the data has a 'time' column with float values
         """
-        # Subclasses can override this to return False even if time is float
-        # This allows modules to indicate they don't have reliable real time data
+        if 'time' not in self.data.columns:
+            return False
+        
         time_vals = self.data['time'].values
         if len(time_vals) < 2:
             return False
@@ -85,8 +96,24 @@ class BaseData:
         return np.issubdtype(time_vals.dtype, np.floating)
     
     def get_time_series(self):
-        """Get the time series as a numpy array."""
+        """
+        Get the time series as a numpy array.
+        
+        Returns:
+            np.ndarray or None: Time series if has_real_time() is True, None otherwise
+        """
+        if not self.has_real_time():
+            return None
         return self.data['time'].values
+    
+    def get_step_series(self):
+        """
+        Get the step series as a numpy array.
+        
+        Returns:
+            np.ndarray: Step indices
+        """
+        return self.data['step'].values
     
     def save_to_csv(self, path):
         """Save data to CSV file."""
@@ -128,7 +155,7 @@ class BaseMultiData(BaseData):
             list: Column names for the specified trajectory
         """
         suffix = f'_No.{trajectory_idx}'
-        return [col for col in self.data.columns if col == 'time' or col.endswith(suffix)]
+        return [col for col in self.data.columns if col in ['step', 'time'] or col.endswith(suffix)]
     
     def get_trajectory_data(self, trajectory_idx: int):
         """

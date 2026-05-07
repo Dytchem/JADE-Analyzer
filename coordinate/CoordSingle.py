@@ -98,15 +98,8 @@ class CoordSingle(BaseData):
                 flat.extend(atom_coord.tolist())
             values[frame_idx, :] = flat
 
-        if len(time_frames) > 1 and not np.isnan(time_frames[1]) and time_frames[1] > 0:
-            time = np.arange(
-                0, time_frames[1] * (self.max_i_time + 0.5), time_frames[1]
-            )
-        else:
-            time = np.arange(0, frame_count, 1.0)
-
+        # Don't create time column - coordinate data only has step indices, not real time
         df = pd.DataFrame(values, columns=columns)
-        df.insert(0, "time", time)
         return df
 
     def save_to_csv(self, path):

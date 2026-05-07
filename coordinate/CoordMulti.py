@@ -32,12 +32,13 @@ class CoordMulti(BaseMultiData):
                 coord_single = CoordSingle(p, max_i_time, type="folder")
                 if i == 0:
                     first = coord_single.data.copy()
-                    coord_columns = [c for c in first.columns if c != "time"]
+                    # Coordinate data doesn't have time column
+                    coord_columns = list(first.columns)
                     rename_map = {c: f"{c}_No.1" for c in coord_columns}
                     first = first.rename(columns=rename_map)
                     frames.append(first)
                 else:
-                    one = coord_single.data.drop(columns=["time"]).copy()
+                    one = coord_single.data.copy()
                     rename_map = {c: f"{c}_No.{i+1}" for c in one.columns}
                     one = one.rename(columns=rename_map)
                     frames.append(one)
