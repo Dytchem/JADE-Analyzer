@@ -21,6 +21,11 @@ class DataUniter:
     - Validating matching time indices
     - Synchronizing time series across sources
     - Providing unified access to combined data
+    
+    Time axis matching rules:
+    - When both sources have real time: time axes must match exactly
+    - When one has real time and one doesn't: step counts must match
+    - When neither has real time: step counts must match
     """
     
     def __init__(self):
@@ -44,6 +49,8 @@ class DataUniter:
         
         if self.data_sources:
             first_source = next(iter(self.data_sources.values()))
+            
+            # Check step count consistency
             if len(data) != len(first_source):
                 raise ValueError(
                     f"Data length {len(data)} does not match existing sources ({len(first_source)})"
@@ -52,6 +59,13 @@ class DataUniter:
                 raise ValueError(
                     f"max_i_time {data.max_i_time} does not match existing sources ({first_source.max_i_time})"
                 )
+            
+            # Check time axis consistency if both have real time
+            if data.has_real_time() and first_source.has_real_time():
+                if not np.allclose(data.data['time'].values, first_source.data['time'].values):
+                    raise ValueError(
+                        f"Time axes do not match between {name} and existing sources"
+                    )
         
         self.data_sources[name] = data
         self._update_unified_data()
@@ -73,27 +87,47 @@ class DataUniter:
             self.unified_data = None
             return
         
-        time_source = None
-        for name, data in self.data_sources.items():
-            if data.has_real_time():
-                time_source = name
-                break
+        # Find all sources with real time
+        real_time_sources = [(name, data) for name, data in self.data_sources.items() if data.has_real_time()]
         
+        # Validate all real time sources have matching time axes
+        if len(real_time_sources) > 1:
+            first_time = real_time_sources[0][1].data['time'].values
+            for name, data in real_time_sources[1:]:
+                if not np.allclose(data.data['time'].values, first_time):
+                    raise ValueError(f"Time axes do not match between {real_time_sources[0][0]} and {name}")
+        
+        # Determine the reference time axis
+        if real_time_sources:
+            # Use the first real time source as reference
+            ref_name, ref_data = real_time_sources[0]
+            ref_time = ref_data.data['time'].values
+        else:
+            # No real time sources, use step indices as time
+            first_source = next(iter(self.data_sources.values()))
+            ref_time = np.arange(len(first_source))
+        
+        # Merge all data sources using the reference time
         merged = None
         for name, data in self.data_sources.items():
+            temp = data.data.copy()
+            
+            # Ensure time column matches reference time
+            temp['time'] = ref_time
+            
+            non_time_cols = [col for col in temp.columns if col != 'time']
+            temp.columns = ['time'] + [f"{name}_{col}" for col in non_time_cols]
+            
             if merged is None:
-                merged = data.data.copy()
-                non_time_cols = [col for col in merged.columns if col != 'time']
-                merged.columns = ['time'] + [f"{name}_{col}" for col in non_time_cols]
+                merged = temp
             else:
-                temp = data.data.copy()
-                non_time_cols = [col for col in temp.columns if col != 'time']
-                temp.columns = ['time'] + [f"{name}_{col}" for col in non_time_cols]
-                merged = merged.merge(temp, on='time', how='outer')
+                # Merge on time - should be exact match since we set same time for all
+                merged = pd.merge(merged, temp, on='time', how='inner')
         
         self.unified_data = merged
         
-        if time_source and self.unified_data is not None:
+        # Update time series for sources without real time
+        if real_time_sources and self.unified_data is not None:
             real_time = self.unified_data['time'].values
             for name, data in self.data_sources.items():
                 if not data.has_real_time():

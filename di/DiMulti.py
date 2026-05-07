@@ -66,6 +66,19 @@ class DiMulti(BaseMultiData):
             raise ValueError("type must be 'folder' or 'csv' or 'pickle'")
         
         super().__init__(data, max_i_time, "di", n_trajectories)
+    
+    def has_real_time(self):
+        """
+        Indicate that density information data does not have real time values.
+        
+        Time values in DI data are derived from frame indices,
+        not read directly from the di_time.out file. Real time must be
+        obtained via set_time_series() or by uniting with other data.
+        
+        Returns:
+            bool: Always False for DI data
+        """
+        return False
 
 
 if __name__ == "__main__":

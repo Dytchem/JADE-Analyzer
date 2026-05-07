@@ -42,8 +42,10 @@ class EleTimeSingle:
         if not self.file_path.exists():
             raise FileNotFoundError(f"ele_time.out not found at {self.file_path}")
         
-        self.data = []
+        self._raw_data = []
         self._parse_file()
+        # Convert to DataFrame for compatibility with other modules
+        self.data = self.to_dataframe()
     
     def _parse_complex(self, value_str: str) -> complex:
         """
@@ -156,15 +158,15 @@ class EleTimeSingle:
             if lines and lines[0]:
                 parsed = self._parse_block(lines)
                 if parsed['step'] is not None:
-                    self.data.append(parsed)
+                    self._raw_data.append(parsed)
     
     def get_steps(self) -> list:
         """Get all step numbers."""
-        return [d['step'] for d in self.data]
+        return [d['step'] for d in self._raw_data]
     
     def get_times(self) -> np.ndarray:
         """Get all time values as numpy array."""
-        return np.array([d['time'] for d in self.data])
+        return np.array([d['time'] for d in self._raw_data])
     
     def get_rho_matrix(self, step: int = None) -> np.ndarray:
         """
@@ -177,12 +179,12 @@ class EleTimeSingle:
             Density matrix (2x2) or array of density matrices (Nx2x2)
         """
         if step is not None:
-            for d in self.data:
+            for d in self._raw_data:
                 if d['step'] == step:
                     return d['rho']
             raise ValueError(f"Step {step} not found")
         
-        return np.array([d['rho'] for d in self.data])
+        return np.array([d['rho'] for d in self._raw_data])
     
     def get_populations(self) -> np.ndarray:
         """
@@ -192,7 +194,7 @@ class EleTimeSingle:
             Array of shape (n_steps, 2) containing population probabilities
         """
         populations = []
-        for d in self.data:
+        for d in self._raw_data:
             pop1 = np.real(d['rho'][0, 0])
             pop2 = np.real(d['rho'][1, 1])
             populations.append([pop1, pop2])
@@ -200,16 +202,16 @@ class EleTimeSingle:
     
     def get_states(self) -> list:
         """Get current state at each step."""
-        return [d['current_state'] for d in self.data]
+        return [d['current_state'] for d in self._raw_data]
     
     def get_new_states(self) -> list:
         """Get new state after hopping at each step."""
-        return [d['new_state'] for d in self.data]
+        return [d['new_state'] for d in self._raw_data]
     
     def get_hopping_probabilities(self) -> np.ndarray:
         """Get hopping probabilities as array."""
         probs = []
-        for d in self.data:
+        for d in self._raw_data:
             if d['hopping_prob'] is not None:
                 probs.append(list(d['hopping_prob']))
             else:
@@ -218,12 +220,12 @@ class EleTimeSingle:
     
     def get_random_numbers(self) -> np.ndarray:
         """Get random numbers as array."""
-        return np.array([d['random_number'] for d in self.data])
+        return np.array([d['random_number'] for d in self._raw_data])
     
     def to_dataframe(self) -> pd.DataFrame:
         """Convert data to pandas DataFrame."""
         rows = []
-        for d in self.data:
+        for d in self._raw_data:
             row = {
                 'step': d['step'],
                 'time': d['time'],
@@ -257,9 +259,43 @@ class EleTimeSingle:
     def description(self) -> dict:
         """Get summary description of the data."""
         return {
-            'n_steps': len(self.data),
-            'time_range': (self.data[0]['time'], self.data[-1]['time']),
-            'initial_state': self.data[0]['current_state'],
-            'final_state': self.data[-1]['new_state'],
-            'n_hops': sum(1 for d in self.data if d['current_state'] != d['new_state'])
+            'n_steps': len(self._raw_data),
+            'time_range': (self._raw_data[0]['time'], self._raw_data[-1]['time']),
+            'initial_state': self._raw_data[0]['current_state'],
+            'final_state': self._raw_data[-1]['new_state'],
+            'n_hops': sum(1 for d in self._raw_data if d['current_state'] != d['new_state'])
         }
+    
+    def has_real_time(self) -> bool:
+        """Check if the data has real time values (float) or just indices."""
+        if not self._raw_data:
+            return False
+        time_vals = self.get_times()
+        if len(time_vals) < 2:
+            return False
+        return np.issubdtype(time_vals.dtype, np.floating)
+    
+    def get_time_series(self) -> np.ndarray:
+        """Get the time series as a numpy array."""
+        return self.get_times()
+    
+    def set_time_series(self, time_series):
+        """Set a custom time series for the data."""
+        time_array = np.asarray(time_series, dtype=float)
+        if time_array.ndim != 1:
+            raise ValueError("time_series must be a 1D sequence")
+        if len(time_array) != len(self._raw_data):
+            raise ValueError(
+                f"time_series length {len(time_array)} does not match data length {len(self._raw_data)}"
+            )
+        
+        # Update raw data
+        for i, d in enumerate(self._raw_data):
+            d['time'] = float(time_array[i])
+        
+        # Update DataFrame
+        self.data['time'] = time_array
+    
+    def __len__(self) -> int:
+        """Get length of data."""
+        return len(self.data)

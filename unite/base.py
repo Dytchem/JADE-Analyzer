@@ -76,6 +76,8 @@ class BaseData:
         Returns:
             bool: True if time values are floats (indicating real time data)
         """
+        # Subclasses can override this to return False even if time is float
+        # This allows modules to indicate they don't have reliable real time data
         time_vals = self.data['time'].values
         if len(time_vals) < 2:
             return False
