@@ -27,19 +27,20 @@ class DataUniter:
         self.data_sources = {}
         self.unified_data = None
     
-    def add_source(self, name: str, data: BaseData):
+    def add_source(self, name: str, data):
         """
         Add a data source to the uniter.
         
         Args:
             name: Name to identify this data source
-            data: BaseData instance to add
+            data: BaseData instance or object with compatible interface (data, max_i_time, has_real_time())
         
         Raises:
-            ValueError: If data is not a BaseData instance or if dimensions don't match
+            ValueError: If data doesn't have required interface or if dimensions don't match
         """
-        if not isinstance(data, BaseData):
-            raise ValueError("Data must be an instance of BaseData")
+        # Check for BaseData interface (duck typing)
+        if not hasattr(data, 'data') or not hasattr(data, 'max_i_time') or not hasattr(data, 'has_real_time'):
+            raise ValueError("Data must have BaseData interface (data, max_i_time, has_real_time)")
         
         if self.data_sources:
             first_source = next(iter(self.data_sources.values()))
@@ -179,19 +180,21 @@ class MultiTrajectoryUniter:
         self.data_sources = {}
         self.n_trajectories = 0
     
-    def add_source(self, name: str, data: BaseMultiData):
+    def add_source(self, name: str, data):
         """
         Add a multi-trajectory data source.
         
         Args:
             name: Name to identify this data source
-            data: BaseMultiData instance to add
+            data: BaseMultiData instance or object with compatible interface
         
         Raises:
-            ValueError: If data is not a BaseMultiData instance or if trajectory count doesn't match
+            ValueError: If data doesn't have required interface or if trajectory count doesn't match
         """
-        if not isinstance(data, BaseMultiData):
-            raise ValueError("Data must be an instance of BaseMultiData")
+        # Check for BaseMultiData interface (duck typing)
+        required_attrs = ['data', 'max_i_time', 'n', 'get_trajectory_columns', 'get_trajectory_data']
+        if not all(hasattr(data, attr) for attr in required_attrs):
+            raise ValueError(f"Data must have BaseMultiData interface: {required_attrs}")
         
         if self.data_sources:
             if data.n != self.n_trajectories:
