@@ -1,20 +1,31 @@
-import sys
-from pathlib import Path
+from typing import List
 
 import numpy as np
 import pandas as pd
 
-
-CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.insert(0, str(CURRENT_DIR))
-
-from CoordSingle import CoordSingle
+from .CoordSingle import CoordSingle
+from unite.base import BaseMultiData
 
 
-class CoordMulti:
-    def __init__(self, path, max_i_time, type="folder"):
+class CoordMulti(BaseMultiData):
+    """
+    Multi-trajectory coordinate data handler for JADE-NAMD simulations.
+    
+    Manages atomic coordinate data across multiple trajectories, providing
+    methods for geometry analysis and visualization.
+    """
+    
+    def __init__(self, path: List[str], max_i_time: int, type: str = "folder"):
+        """
+        Initialize CoordMulti.
+        
+        Args:
+            path: List of paths to trajectory folders or path to CSV/Pickle file
+            max_i_time: Maximum time index
+            type: Data source type ('folder', 'csv', or 'pickle')
+        """
         self.max_i_time = max_i_time
+        
         if type == "folder":
             frames = []
             for i, p in enumerate(path):
@@ -33,37 +44,30 @@ class CoordMulti:
 
             if not frames:
                 raise ValueError("path is empty when type is 'folder'")
-            self.data = pd.concat(frames, axis=1)
+            data = pd.concat(frames, axis=1)
+            n_trajectories = len(path)
 
         elif type == "csv":
-            self.data = pd.read_csv(path)
+            data = pd.read_csv(path)
+            # Count trajectories by finding unique suffixes
+            suffix_counts = {}
+            for col in data.columns:
+                if col != "time" and "_No." in col:
+                    suffix = col.split("_No.")[-1]
+                    suffix_counts[suffix] = 1
+            n_trajectories = len(suffix_counts)
         elif type == "pickle":
-            self.data = pd.read_pickle(path)
+            data = pd.read_pickle(path)
+            suffix_counts = {}
+            for col in data.columns:
+                if col != "time" and "_No." in col:
+                    suffix = col.split("_No.")[-1]
+                    suffix_counts[suffix] = 1
+            n_trajectories = len(suffix_counts)
         else:
             raise ValueError("type must be 'folder' or 'csv' or 'pickle'")
-
-        self.n = (self.data.shape[1] - 1) // 3
-        self.time_interval = self.data["time"][1] - self.data["time"][0]
-
-    def set_time_series(self, time_series):
-        time_array = np.asarray(time_series, dtype=float)
-        if time_array.ndim != 1:
-            raise ValueError("time_series must be a 1D sequence")
-        if len(time_array) != len(self.data):
-            raise ValueError(
-                f"time_series length {len(time_array)} does not match data length {len(self.data)}"
-            )
-
-        self.data.loc[:, "time"] = time_array
-        self.time_interval = (
-            time_array[1] - time_array[0] if len(time_array) > 1 else np.nan
-        )
-
-    def save_to_csv(self, path):
-        self.data.to_csv(path, index=False)
-
-    def save_to_pickle(self, path):
-        self.data.to_pickle(path)
+        
+        super().__init__(data, max_i_time, "coordinate", n_trajectories)
 
 
 if __name__ == "__main__":

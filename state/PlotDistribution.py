@@ -1,15 +1,9 @@
-import sys
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import numpy as np
 from pathlib import Path
 
-
-CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.insert(0, str(CURRENT_DIR))
-
-from StateMulti import StateMulti
+from state import StateMulti
 
 
 DEFAULT_FONT_PATH = (

@@ -1,20 +1,31 @@
-import sys
-from pathlib import Path
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
 
-
-CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.insert(0, str(CURRENT_DIR))
-
-from StateSingle import StateSingle
+from .StateSingle import StateSingle
+from unite.base import BaseMultiData
 
 
-class StateMulti:
-    def __init__(self, path, max_i_time, type="folder"):
+class StateMulti(BaseMultiData):
+    """
+    Multi-trajectory state data handler for JADE-NAMD simulations.
+    
+    Manages state data across multiple trajectories, providing methods for
+    statistical analysis and visualization of electronic state transitions.
+    """
+    
+    def __init__(self, path: List[str], max_i_time: int, type: str = "folder"):
+        """
+        Initialize StateMulti.
+        
+        Args:
+            path: List of paths to trajectory folders or path to CSV/Pickle file
+            max_i_time: Maximum time index
+            type: Data source type ('folder', 'csv', or 'pickle')
+        """
         self.max_i_time = max_i_time
+        
         if type == "folder":
             frames = []
             for i, p in enumerate(path):
@@ -32,36 +43,19 @@ class StateMulti:
 
             if not frames:
                 raise ValueError("path is empty when type is 'folder'")
-            self.data = pd.concat(frames, axis=1)
+            data = pd.concat(frames, axis=1)
+            n_trajectories = len(path)
 
         elif type == "csv":
-            self.data = pd.read_csv(path)
+            data = pd.read_csv(path)
+            n_trajectories = data.shape[1] - 1
         elif type == "pickle":
-            self.data = pd.read_pickle(path)
+            data = pd.read_pickle(path)
+            n_trajectories = data.shape[1] - 1
         else:
             raise ValueError("type must be 'folder' or 'csv' or 'pickle'")
-        self.n = self.data.shape[1] - 1
-        self.time_interval = self.data["time"][1] - self.data["time"][0]
-
-    def set_time_series(self, time_series):
-        time_array = np.asarray(time_series, dtype=float)
-        if time_array.ndim != 1:
-            raise ValueError("time_series must be a 1D sequence")
-        if len(time_array) != len(self.data):
-            raise ValueError(
-                f"time_series length {len(time_array)} does not match data length {len(self.data)}"
-            )
-
-        self.data.loc[:, "time"] = time_array
-        self.time_interval = (
-            time_array[1] - time_array[0] if len(time_array) > 1 else np.nan
-        )
-
-    def save_to_csv(self, path):
-        self.data.to_csv(path, index=False)
-
-    def save_to_pickle(self, path):
-        self.data.to_pickle(path)
+        
+        super().__init__(data, max_i_time, "state", n_trajectories)
 
     def count_state(self):
         state_values = self.data.iloc[:, 1:].to_numpy(dtype=int)

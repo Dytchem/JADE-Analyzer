@@ -1,35 +1,14 @@
-import sys
 from pathlib import Path
-from importlib import import_module
+from typing import Tuple, Optional
 
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
-CURRENT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = CURRENT_DIR.parent
-for module_dir in (ROOT_DIR / "state", ROOT_DIR / "coordinate"):
-    module_path = str(module_dir)
-    if module_path not in sys.path:
-        sys.path.insert(0, module_path)
-
-CoordMulti = import_module("CoordMulti").CoordMulti
-StateMulti = import_module("StateMulti").StateMulti
-
-try:
-    from ._core import build_geometry_series
-    from ._core import extract_hop_time
-    from ._core import geometry_label
-    from ._core import normalize_geometries
-    from ._core import select_value_at_time
-except ImportError:
-    from _core import build_geometry_series
-    from _core import extract_hop_time
-    from _core import geometry_label
-    from _core import normalize_geometries
-    from _core import select_value_at_time
+from state import StateMulti
+from coordinate import CoordMulti
+from ._core import build_geometry_series, extract_hop_time, geometry_label, normalize_geometries, select_value_at_time
 
 
 DEFAULT_FONT_PATH = (
