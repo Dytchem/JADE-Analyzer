@@ -20,7 +20,7 @@ class EleTimeSingle:
     Reads and parses ele_time.out files containing electronic state evolution data.
     """
 
-    def __init__(self, path: str, type: str = "file"):
+    def __init__(self, path: str, type: str = "folder"):
         """
         Initialize the EleTimeSingle instance.
         
@@ -46,6 +46,12 @@ class EleTimeSingle:
         self._parse_file()
         # Convert to DataFrame for compatibility with other modules
         self.data = self.to_dataframe()
+        # Set max_i_time for BaseData interface compatibility
+        # Use the last step number from raw data, which should be max_i_time
+        if self._raw_data:
+            self.max_i_time = self._raw_data[-1]['step']
+        else:
+            self.max_i_time = 0
     
     def _parse_complex(self, value_str: str) -> complex:
         """
@@ -225,6 +231,34 @@ class EleTimeSingle:
     def to_dataframe(self) -> pd.DataFrame:
         """Convert data to pandas DataFrame."""
         rows = []
+        
+        # Add step 0 data if it's missing (to match other modules that have 501 steps)
+        # Check if the first step is 1 (missing step 0)
+        if self._raw_data and self._raw_data[0]['step'] == 1:
+            # Create initial state at step 0 (time = 0.0)
+            # Assume initial state is ground state with electron in state 1
+            rows.append({
+                'step': 0,
+                'time': 0.0,
+                'rho_11_real': 1.0,
+                'rho_11_imag': 0.0,
+                'rho_12_real': 0.0,
+                'rho_12_imag': 0.0,
+                'rho_21_real': 0.0,
+                'rho_21_imag': 0.0,
+                'rho_22_real': 0.0,
+                'rho_22_imag': 0.0,
+                'current_state': 1,
+                'new_state': 1,
+                'random_number': np.nan,
+                'hop_prob_1': np.nan,
+                'hop_prob_2': np.nan,
+                'area_1': np.nan,
+                'area_2': np.nan,
+                'hop_prob_avg_1': np.nan,
+                'hop_prob_avg_2': np.nan
+            })
+        
         for d in self._raw_data:
             row = {
                 'step': d['step'],
@@ -243,10 +277,16 @@ class EleTimeSingle:
             }
             if d['hopping_prob'] is not None:
                 row['hop_prob_1'], row['hop_prob_2'] = d['hopping_prob']
+            else:
+                row['hop_prob_1'], row['hop_prob_2'] = np.nan, np.nan
             if d['area_for_hopping'] is not None:
                 row['area_1'], row['area_2'] = d['area_for_hopping']
+            else:
+                row['area_1'], row['area_2'] = np.nan, np.nan
             if d['hopping_prob_avg'] is not None:
                 row['hop_prob_avg_1'], row['hop_prob_avg_2'] = d['hopping_prob_avg']
+            else:
+                row['hop_prob_avg_1'], row['hop_prob_avg_2'] = np.nan, np.nan
             rows.append(row)
         
         return pd.DataFrame(rows)
