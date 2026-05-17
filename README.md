@@ -7,7 +7,7 @@ JADE-Analyzer 是一个用于分析 JADE-NAMD 激发态动力学模拟输出数�
 
 ## 功能特性
 
-- **多模块数据处理**: 状态、坐标、密度信息、能量、电子时间演化等
+- **多模块数据处理**: 状态、坐标、密度信息、能量、PE、电子时间演化等
 - **单/多轨迹支持**: `Single` 和 `Multi` 类处理不同规模的数据
 - **统一接口**: 所有数据类继承自统一基类，便于集成
 - **数据整合**: 支持多类型数据整合分析
@@ -21,6 +21,7 @@ JADE-Analyzer/
 ├── coordinate/     # 原子坐标与几何参数
 ├── di/             # 密度信息 (Mulliken电荷、偶极矩)
 ├── energy/         # 能量数据处理
+├── pe/              # pe_time.out 数据处理
 ├── ele_time/       # 电子时间演化数据
 ├── hop_coord/      # 跃迁-坐标关联分析
 ├── unite/          # 数据整合模块
@@ -65,7 +66,16 @@ ele = EleTimeSingle("path/to/ele_time.out")
 populations = ele.get_populations()  # 获取态布居数
 ```
 
-### 4. 可视化
+### 4. 读取 PE 数据
+
+```python
+from pe import PeSingle
+
+pe = PeSingle("path/to/trajectory", max_i_time=500)
+print(pe.data.head())
+```
+
+### 5. 可视化
 
 ```python
 from state import PlotDistribution
@@ -82,6 +92,7 @@ plotter.plot_normalized(save_path="state_dist.png")
 | `coordinate` | 原子坐标与几何参数计算 |
 | `di` | Mulliken电荷与偶极矩 |
 | `energy` | 能量数据处理 |
+| `pe` | pe_time.out 数据读取 |
 | `ele_time` | 电子时间演化数据读取 |
 | `hop_coord` | 跃迁与几何参数关联分析 |
 | `unite` | 多数据源整合 |

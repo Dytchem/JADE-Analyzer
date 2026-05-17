@@ -10,9 +10,17 @@ __author__ = "JADE Team"
 
 # Export main classes from submodules
 from .state import StateSingle, StateMulti
-from .coordinate import CoordSingle, CoordMulti, Geometry, PlotGeom, CountGeom, PlotCount
+from .coordinate import (
+    CoordSingle,
+    CoordMulti,
+    Geometry,
+    PlotGeom,
+    CountGeom,
+    PlotCount,
+)
 from .di import DiSingle, DiMulti
 from .energy import EnergySingle, EnergyMulti
+from .pe import PeSingle, PeMulti
 from .hop_coord import HopCoordSingle, HopCoordMulti
 from .unite import DataUniter, MultiTrajectoryUniter, BaseData, BaseMultiData
 
@@ -33,6 +41,9 @@ __all__ = [
     # Energy
     "EnergySingle",
     "EnergyMulti",
+    # PE
+    "PeSingle",
+    "PeMulti",
     # Hop Coord
     "HopCoordSingle",
     "HopCoordMulti",

@@ -26,13 +26,14 @@ class CountGeom:
             raise ValueError("Geometry data has no value columns to count")
 
         if regions is None:
-            # Default for angle-like quantity: cis/trans by absolute value.
+            # Default for dihedral-like quantity:
+            # wrap to [-180, 180), cis in [-90, 90], trans otherwise.
             regions = {
-                "cis": [(0.0, 90.0, True, False)],
-                "trans": [(90.0, np.inf, True, True)],
+                "cis": [(-90.0, 90.0, True, True)],
+                "trans": [(-180.0, -90.0, True, False), (90.0, np.inf, False, True)],
             }
             if use_abs is None:
-                use_abs = True
+                use_abs = False
 
         if use_abs is None:
             use_abs = False
