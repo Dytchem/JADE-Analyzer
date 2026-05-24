@@ -241,6 +241,7 @@ class MultiTrajectoryUniter:
     def __init__(self):
         self.data_sources = {}
         self.n_trajectories = 0
+        self._unified_data = None
     
     def add_source(self, name: str, data):
         """
@@ -267,6 +268,42 @@ class MultiTrajectoryUniter:
             self.n_trajectories = data.n
         
         self.data_sources[name] = data
+        self._unified_data = None
+    
+    def get_unified_data(self) -> pd.DataFrame:
+        """Get a merged DataFrame of all data sources."""
+        if self._unified_data is not None:
+            return self._unified_data
+        
+        if not self.data_sources:
+            return pd.DataFrame()
+        
+        merged = None
+        time_added = False
+        for name, data in self.data_sources.items():
+            temp = data.data.copy()
+            if time_added and 'time' in temp.columns:
+                temp = temp.drop('time', axis=1)
+            time_added = True
+            cols_to_rename = [c for c in temp.columns if c != 'time']
+            rename_map = {col: f"{name}_{col}" for col in cols_to_rename}
+            temp = temp.rename(columns=rename_map)
+            if merged is None:
+                merged = temp
+            else:
+                merged = pd.concat([merged, temp], axis=1)
+        
+        self._unified_data = merged
+        return merged
+    
+    def save_unified_to_csv(self, path: str):
+        """Save unified data to CSV."""
+        df = self.get_unified_data()
+        if df.empty:
+            raise ValueError("No data to save")
+        import os
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        df.to_csv(path, index=False)
     
     def get_trajectory_uniter(self, trajectory_idx: int) -> DataUniter:
         """

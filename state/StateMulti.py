@@ -69,10 +69,10 @@ class StateMulti(BaseMultiData):
 
         elif type == "csv":
             data = pd.read_csv(path)
-            n_trajectories = data.shape[1] - 1
+            n_trajectories = sum(1 for c in data.columns if c.startswith("state_No."))
         elif type == "pickle":
             data = pd.read_pickle(path)
-            n_trajectories = data.shape[1] - 1
+            n_trajectories = sum(1 for c in data.columns if c.startswith("state_No."))
         else:
             raise ValueError("type must be 'folder' or 'csv' or 'pickle'")
 

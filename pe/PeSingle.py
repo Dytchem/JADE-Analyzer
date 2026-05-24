@@ -53,6 +53,7 @@ class PeSingle(BaseData):
                 data.append(row)
 
         df = pd.DataFrame(data, columns=columns)
+        df = df.iloc[:self.max_i_time + 1]
         return df
 
     def save_to_csv(self, path):
