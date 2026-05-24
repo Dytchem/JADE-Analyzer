@@ -10,40 +10,61 @@ from unite.base import BaseMultiData
 class StateMulti(BaseMultiData):
     """
     Multi-trajectory state data handler for JADE-NAMD simulations.
-    
+
     Manages state data across multiple trajectories, providing methods for
     statistical analysis and visualization of electronic state transitions.
     """
-    
+
     def __init__(self, path: List[str], max_i_time: int, type: str = "folder"):
         """
         Initialize StateMulti.
-        
+
         Args:
             path: List of paths to trajectory folders or path to CSV/Pickle file
             max_i_time: Maximum time index
             type: Data source type ('folder', 'csv', or 'pickle')
         """
         self.max_i_time = max_i_time
-        
+
         if type == "folder":
             frames = []
+            nac_frames = []
+            ddt_frames = []
             for i, p in enumerate(path):
                 state_single = StateSingle(p, max_i_time, type="folder")
                 if i == 0:
                     first = state_single.data.loc[:, ["time", "state"]].copy()
                     first.columns = ["time", "state_No.1"]
                     frames.append(first)
+                    nac_first = state_single.data.loc[:, ["nac"]].copy()
+                    nac_first.columns = [f"nac_No.{i+1}"]
+                    nac_frames.append(nac_first)
+                    ddt_first = state_single.data.loc[:, ["ddt"]].copy()
+                    ddt_first.columns = [f"ddt_No.{i+1}"]
+                    ddt_frames.append(ddt_first)
                 else:
                     frames.append(
                         state_single.data.loc[:, ["state"]].rename(
                             columns={"state": f"state_No.{i+1}"}
                         )
                     )
+                    nac_frames.append(
+                        state_single.data.loc[:, ["nac"]].rename(
+                            columns={"nac": f"nac_No.{i+1}"}
+                        )
+                    )
+                    ddt_frames.append(
+                        state_single.data.loc[:, ["ddt"]].rename(
+                            columns={"ddt": f"ddt_No.{i+1}"}
+                        )
+                    )
 
             if not frames:
                 raise ValueError("path is empty when type is 'folder'")
             data = pd.concat(frames, axis=1)
+            nac_data = pd.concat(nac_frames, axis=1)
+            ddt_data = pd.concat(ddt_frames, axis=1)
+            data = pd.concat([data, nac_data, ddt_data], axis=1)
             n_trajectories = len(path)
 
         elif type == "csv":
@@ -54,7 +75,7 @@ class StateMulti(BaseMultiData):
             n_trajectories = data.shape[1] - 1
         else:
             raise ValueError("type must be 'folder' or 'csv' or 'pickle'")
-        
+
         super().__init__(data, max_i_time, "state", n_trajectories)
 
     def count_state(self):
@@ -111,7 +132,7 @@ class StateMulti(BaseMultiData):
         # 退激发前崩溃数量
         count_crash1 = self.n - len(hop_time)
         if len(hop_time) < self.n:
-            hop_time += [self.data["time"].iloc[-1]] * count_crash
+            hop_time += [self.data["time"].iloc[-1]] * count_crash1
 
         # hop_time.sort()
         # print(hop_time)

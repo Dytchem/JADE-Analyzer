@@ -6,7 +6,7 @@ from JADE-NAMD simulations.
 """
 
 __version__ = "1.0.0"
-__author__ = "JADE Team"
+__author__ = "Dytchem"
 
 # Export main classes from submodules
 from .state import StateSingle, StateMulti

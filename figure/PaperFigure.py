@@ -11,6 +11,45 @@ from typing import Optional, Union, List, Tuple, Dict, Any
 from .FigureStyle import FigureStyle
 
 
+def _bake_opacity_in_svg(svg_path):
+    """Inkscape EMF export loses opacity; bake it into stroke/fill colors."""
+    import re
+    with open(svg_path, 'r', encoding='utf-8') as f:
+        svg = f.read()
+
+    def blend(color, op):
+        if op >= 0.999:
+            return color
+        r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+        r = min(255, int(r * op + 255 * (1 - op)))
+        g = min(255, int(g * op + 255 * (1 - op)))
+        b = min(255, int(b * op + 255 * (1 - op)))
+        return f'#{r:02x}{g:02x}{b:02x}'
+
+    svg = re.sub(
+        r'(stroke|fill)="(#[0-9a-f]{6})"[^>]*?stroke-opacity="([0-9.]+)"',
+        lambda m: m.group(0).replace(f'stroke-opacity="{m.group(3)}"', '')
+                         .replace(m.group(2), blend(m.group(2), float(m.group(3)))),
+        svg
+    )
+
+    # Inline style: stroke:#color;...;stroke-opacity:op
+    def bake_style(m):
+        style = m.group(1)
+        style_new = re.sub(
+            r'stroke:\s*(#[0-9a-f]{6});(.*?)stroke-opacity:\s*([0-9.]+)',
+            lambda m2: f'stroke:{blend(m2.group(1), float(m2.group(3)))};{m2.group(2)}',
+            style
+        )
+        style_new = re.sub(r';stroke-opacity:\s*[0-9.]+', '', style_new)
+        return f'style="{style_new}"'
+
+    svg = re.sub(r'style="([^"]*?stroke-opacity:[^"]*?)"', bake_style, svg)
+
+    with open(svg_path, 'w', encoding='utf-8') as f:
+        f.write(svg)
+
+
 def _find_inkscape():
     """Find Inkscape executable path."""
     import os
@@ -688,6 +727,8 @@ class PaperFigure:
             bbox_inches=bbox_inches, pad_inches=pad_inches,
             transparent=transparent
         )
+
+        _bake_opacity_in_svg(svg_path)
 
         inkscape = _find_inkscape()
         if inkscape:

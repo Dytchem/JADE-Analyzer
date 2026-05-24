@@ -27,22 +27,37 @@ class StateSingle(BaseData):
         self.max_i_time = max_i_time
         
         if type == "folder":
-            time = np.zeros(max_i_time + 1)  # 时间序列，单位fs
-            state = np.zeros(max_i_time + 1, dtype=int)  # 状态序列，1表示S0，2表示S1
+            time = np.zeros(max_i_time + 1)
+            state = np.zeros(max_i_time + 1, dtype=int)
+            nac = np.full(max_i_time + 1, np.nan)
+            ddt = np.full(max_i_time + 1, np.nan)
             with open(os.path.join(path, "hop_all_time.out")) as f:
                 for i in range(0, max_i_time + 1):
-                    f.readline()
-                    a = f.readline()
+                    f.readline()  # separator
+                    a = f.readline()  # current state
                     if not a:
                         break
                     a = a.strip().split()
                     time[i] = float(a[1])
                     state[i] = int(a[-1])
-                    for j in range(8):
-                        f.readline()
-            # 时间序列补全
+                    f.readline()  # Potential energy
+                    f.readline()  # Current potential energy
+                    f.readline()  # Gradient
+                    b = f.readline()  # <psi| d/dr | psi> NAC
+                    if b:
+                        p = b.strip().split()
+                        if len(p) >= 7:
+                            nac[i] = (abs(float(p[-4])) + abs(float(p[-3]))) / 2
+                    f.readline()  # Velocity
+                    c = f.readline()  # <psi| d/dt | psi> ddt
+                    if c:
+                        p = c.strip().split()
+                        if len(p) >= 7:
+                            ddt[i] = (abs(float(p[-4])) + abs(float(p[-3]))) / 2
+                    f.readline()  # population
+                    f.readline()  # trailing separator
             time = np.arange(0, time[1] * (max_i_time + 0.5), time[1])
-            data = pd.DataFrame({"time": time, "state": state})
+            data = pd.DataFrame({"time": time, "state": state, "nac": nac, "ddt": ddt})
         elif type == "csv":
             data = pd.read_csv(path)
         elif type == "pickle":
