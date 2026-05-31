@@ -102,6 +102,7 @@ class PlotCount:
         show=True,
         title="S1归一化真实曲线与指数拟合",
         fit_max_time=None,
+        fit_start_time=None,
         x_min=None,
         x_max=None,
         y_min=None,
@@ -114,12 +115,15 @@ class PlotCount:
         time = self.count_state["time"].to_numpy(dtype=float)
         y = self.count_state["count_state2"].to_numpy(dtype=float) / float(total)
 
-        start_idx_candidates = np.where(np.abs(y - 1.0) > 1e-12)[0]
-        if len(start_idx_candidates) == 0:
-            raise ValueError("Normalized count_state2 never deviates from 1")
-
-        start_idx = int(start_idx_candidates[0])
-        t0 = float(time[start_idx])
+        if fit_start_time is not None:
+            t0 = float(fit_start_time)
+            start_idx = int(np.searchsorted(time, t0))
+        else:
+            start_idx_candidates = np.where(np.abs(y - 1.0) > 1e-12)[0]
+            if len(start_idx_candidates) == 0:
+                raise ValueError("Normalized count_state2 never deviates from 1")
+            start_idx = int(start_idx_candidates[0])
+            t0 = float(time[start_idx])
 
         t_seg = time[start_idx:]
         y_seg = y[start_idx:]

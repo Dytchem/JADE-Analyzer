@@ -121,10 +121,10 @@ class StateMulti(BaseMultiData):
         crash_time.sort()
         return {"hop_time": hop_time, "crash_time": crash_time}
 
-    def description(self, fit_max_time=None):
+    def description(self, fit_max_time=None, fit_start_time=None, fit_start_ratio=None):
         dc = self.distribution_change()
         hop_time = dc["hop_time"]
-        fit_hop_time = self._exp_decay_hop_time(fit_max_time=fit_max_time)
+        fit_hop_time = self._exp_decay_hop_time(fit_max_time=fit_max_time, fit_start_time=fit_start_time, fit_start_ratio=fit_start_ratio)
 
         # 最大时间内崩溃数量
         count_crash = len(dc["crash_time"])
@@ -163,7 +163,7 @@ class StateMulti(BaseMultiData):
             "退激发时间（指数衰减拟合）": fit_hop_time,
         }
 
-    def _exp_decay_hop_time(self, fit_max_time=None):
+    def _exp_decay_hop_time(self, fit_max_time=None, fit_start_time=None, fit_start_ratio=None):
         count_df = self.count_state()
         total = self.n
         if total <= 0:
@@ -172,13 +172,22 @@ class StateMulti(BaseMultiData):
         time = count_df["time"].to_numpy(dtype=float)
         y = count_df["count_state2"].to_numpy(dtype=float) / float(total)
 
-        # Start fitting from the first point where normalized S1 population is not 1.
-        start_idx_candidates = np.where(np.abs(y - 1.0) > 1e-12)[0]
-        if len(start_idx_candidates) == 0:
-            return np.nan
-
-        start_idx = int(start_idx_candidates[0])
-        t0 = float(time[start_idx])
+        if fit_start_ratio is not None:
+            ratio = float(fit_start_ratio)
+            ratio_idx = np.where(y <= ratio)[0]
+            if len(ratio_idx) == 0:
+                return np.nan
+            start_idx = int(ratio_idx[0])
+            t0 = float(time[start_idx])
+        elif fit_start_time is not None:
+            t0 = float(fit_start_time)
+            start_idx = int(np.searchsorted(time, t0))
+        else:
+            start_idx_candidates = np.where(np.abs(y - 1.0) > 1e-12)[0]
+            if len(start_idx_candidates) == 0:
+                return np.nan
+            start_idx = int(start_idx_candidates[0])
+            t0 = float(time[start_idx])
 
         t_seg = time[start_idx:]
         y_seg = y[start_idx:]
