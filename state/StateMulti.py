@@ -79,7 +79,8 @@ class StateMulti(BaseMultiData):
         super().__init__(data, max_i_time, "state", n_trajectories)
 
     def count_state(self):
-        state_values = self.data.iloc[:, 1:].to_numpy(dtype=int)
+        state_cols = [c for c in self.data.columns if c.startswith("state_No.")]
+        state_values = self.data[state_cols].to_numpy(dtype=int)
         count_state1 = np.sum(state_values == 1, axis=1)
         count_state2 = np.sum(state_values == 2, axis=1)
         count_crash = np.sum(state_values == 0, axis=1)
